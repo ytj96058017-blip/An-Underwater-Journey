@@ -234,15 +234,63 @@
         <h3 class="text-xs font-bold text-cyan-300 flex items-center gap-1">
           <span>🪱</span> 내 8개 미끼함
         </h3>
-        <div class="flex items-center gap-2">
-          <!-- 심해어 참조표 모달 열기 버튼 -->
-          <button onclick="toggleReferenceModal(true)" class="bg-cyan-900/80 hover:bg-cyan-800 text-cyan-200 border border-cyan-500/60 text-[10px] font-bold px-2 py-1 rounded-md flex items-center gap-1 transition shadow">
-            <span>📖</span> 참조표
-          </button>
-          <span id="s-bait-lock-badge" class="text-[11px] text-slate-400 font-bold">미끼 제작 (0/16)</span>
-        </div>
+        <span id="s-bait-lock-badge" class="text-[11px] text-slate-400 font-bold">미끼 제작 (0/16)</span>
       </div>
       <div id="bait-slots-container" class="grid grid-cols-4 gap-2"></div>
+    </section>
+
+    <!-- ★ 상시 노출: 심해어 참조표 (클릭 없이 바로 보면서 미끼 제작!) -->
+    <section class="bg-slate-900/95 p-3.5 rounded-xl border-2 border-amber-500/60 shadow-lg flex flex-col gap-2.5">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+        <h3 class="text-xs font-black text-amber-300 flex items-center gap-1.5">
+          <span>📖</span> 심해어 참조표 (전략 도우미)
+        </h3>
+        <span class="text-[10px] text-slate-400 font-semibold">미끼 제작 시 참고하세요</span>
+      </div>
+
+      <!-- 참조표 원본 이미지 상시 뷰어 -->
+      <div class="w-full bg-slate-950 rounded-lg overflow-hidden border border-slate-800 flex items-center justify-center p-1 shadow-inner">
+        <img id="s-permanent-ref-img" src="" referrerpolicy="no-referrer" class="w-full h-auto object-contain rounded" alt="심해어 참조표" />
+      </div>
+
+      <!-- 모바일 가독성을 위한 텍스트 요약 카드 (상시 표시) -->
+      <div class="grid grid-cols-2 gap-1.5 text-[11px]">
+        <div class="bg-amber-950/40 border border-amber-500/40 p-2 rounded-lg">
+          <span class="font-black text-amber-300 block mb-1">🔸 작은 숫자</span>
+          <div class="space-y-0.5 text-slate-300">
+            <div>ab 최소 <span class="text-amber-400 font-bold">[3점]</span></div>
+            <div>a+b 최소 <span class="text-amber-400 font-bold">[3점]</span></div>
+            <div>1 포함 <span class="text-amber-400 font-bold">[2점]</span></div>
+          </div>
+        </div>
+        <div class="bg-rose-950/40 border border-rose-500/40 p-2 rounded-lg">
+          <span class="font-black text-rose-300 block mb-1">🔺 큰 숫자</span>
+          <div class="space-y-0.5 text-slate-300">
+            <div>ab 최대 <span class="text-rose-400 font-bold">[3점]</span></div>
+            <div>a+b 최대 <span class="text-rose-400 font-bold">[3점]</span></div>
+            <div>9 포함 <span class="text-rose-400 font-bold">[2점]</span></div>
+          </div>
+        </div>
+        <div class="bg-emerald-950/40 border border-emerald-500/40 p-2 rounded-lg">
+          <span class="font-black text-emerald-300 block mb-1">🔹 특별한 숫자</span>
+          <div class="space-y-0.5 text-slate-300">
+            <div>a/b 배수 <span class="text-emerald-400 font-bold">[2점]</span></div>
+            <div>차이 최소 <span class="text-emerald-400 font-bold">[3점]</span></div>
+            <div>차이 최대 <span class="text-emerald-400 font-bold">[3점]</span></div>
+            <div>a+b=10 <span class="text-cyan-300 font-bold">[X점: 인원수]</span></div>
+          </div>
+        </div>
+        <div class="bg-cyan-950/40 border border-cyan-500/40 p-2 rounded-lg">
+          <span class="font-black text-cyan-300 block mb-1">🍀 행운의 숫자</span>
+          <div class="space-y-0.5 text-slate-300">
+            <div>a=b (같은수) <span class="text-cyan-400 font-bold">[4점]</span></div>
+            <div>50에 근접 <span class="text-cyan-400 font-bold">[2점]</span></div>
+            <div>0 포함 <span class="text-cyan-400 font-bold">[3점]</span></div>
+            <div>ab/10 [3점] · ab/5 [2점]</div>
+            <div>5 포함 <span class="text-cyan-300 font-bold">[X점: 인원수]</span></div>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- 현재 출현한 심해어 카드 확인 및 도전 -->
@@ -495,9 +543,9 @@
       renderWorksheet();
       initFirebaseSync();
 
-      // 학생 진입 시 참조표 이미지 사전 로드
-      const refImg = document.getElementById('reference-chart-img');
-      loadGenericImage(refImg, null, REFERENCE_IMAGE_CONFIG);
+      // 학생 진입 시 상시 노출 참조표 이미지 자동 로드
+      const permanentRefImg = document.getElementById('s-permanent-ref-img');
+      loadGenericImage(permanentRefImg, null, REFERENCE_IMAGE_CONFIG);
     }
 
     function logout() {
@@ -516,6 +564,19 @@
       } else {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+      }
+    }
+
+    function toggleInlineReference() {
+      const panel = document.getElementById('inline-reference-panel');
+      const arrow = document.getElementById('inline-ref-arrow');
+      if (!panel) return;
+      if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        arrow.textContent = '▲ 접기';
+      } else {
+        panel.classList.add('hidden');
+        arrow.textContent = '▼ 펼치기';
       }
     }
 
