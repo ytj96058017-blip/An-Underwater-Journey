@@ -130,7 +130,7 @@
       <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col h-[520px]">
         <h3 class="font-bold text-sm text-amber-300 border-b border-slate-700 pb-2 mb-3">학생 참가 및 점수 현황</h3>
         <div id="teacher-student-list" class="flex-1 overflow-y-auto space-y-2 pr-1">
-          <!-- 학생 리스트 렌더링 -->
+          <!-- 학생 리스트 -->
         </div>
       </div>
     </div>
@@ -149,29 +149,29 @@
       </div>
     </header>
 
-    <!-- 교사가 굴린 주사위 안내 배너 -->
+    <!-- 주사위 번호 안내 -->
     <div class="bg-cyan-950/80 border border-cyan-500/60 p-3 rounded-xl flex items-center justify-between">
       <div>
         <span class="text-xs text-cyan-300 block">선생님이 뽑은 주사위 번호</span>
-        <span class="text-[11px] text-slate-400">아래 8개 미끼 칸 중 비어있는 칸을 눌러 배치하세요.</span>
+        <span class="text-[11px] text-slate-400">아래 8개 미끼 칸 중 비어있는 칸을 눌러 1곳에 배치하세요.</span>
       </div>
       <div id="s-incoming-dice" class="w-12 h-12 rounded-lg bg-cyan-900 border-2 border-cyan-400 text-cyan-200 font-black text-2xl flex items-center justify-center">
         -
       </div>
     </div>
 
-    <!-- 미끼 제작 슬롯 8개 (각각 a, b 2칸) -->
+    <!-- 미끼 제작 슬롯 8개 -->
     <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
       <div class="flex justify-between items-center mb-2">
         <h3 class="text-xs font-bold text-cyan-300">내 8개 미끼함</h3>
         <span id="s-bait-lock-badge" class="text-[11px] text-slate-400 font-bold">미끼 제작 중 (0/16)</span>
       </div>
       <div id="bait-slots-container" class="grid grid-cols-4 gap-2">
-        <!-- 8개 슬롯 생성 -->
+        <!-- 슬롯 동적 생성 -->
       </div>
     </div>
 
-    <!-- 현재 출현한 심해어 카드 확인 및 도전 -->
+    <!-- 심해어 카드 확인 및 도전/포기 -->
     <div class="bg-slate-900/90 p-4 rounded-xl border border-cyan-600/60 flex flex-col sm:flex-row gap-4 items-center shadow-lg">
       <div class="w-36 h-52 bg-slate-950 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center">
         <img id="s-card-img" src="" class="w-full h-full object-cover hidden" alt="심해어 카드" />
@@ -203,11 +203,11 @@
       </div>
     </div>
 
-    <!-- 16판 항해 기록표 -->
+    <!-- 16판 기록표 -->
     <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
       <h3 class="text-xs font-bold text-cyan-300 mb-2">내 항해 기록표 (16판)</h3>
       <div id="s-worksheet-table" class="grid grid-cols-4 sm:grid-cols-8 gap-1.5 text-center text-xs">
-        <!-- 1~16판 기록 셀 -->
+        <!-- 셀 동적 생성 -->
       </div>
     </div>
   </div>
@@ -227,17 +227,17 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // --- 2. 16종 심해어 카드 정의 (PDF 구글 드라이브 Direct 링크 연결) ---
+    // --- 2. 16종 심해어 카드 정의 ---
     const FISH_CARDS = [
       { id: 1, title: '0 포함', desc: '0을 포함한 수 [3점]', score: 3, driveId: '1XYDaj_bvTn7kYj0JKeMidq9zQjneLGP6', type: 'has0' },
       { id: 2, title: '1 포함', desc: '1을 포함한 수 [2점]', score: 2, driveId: '1CMtZZHehekPpEaWiCjkITSWQ00BFM-ye', type: 'has1' },
-      { id: 3, title: '5 포함 (함정)', desc: '5 포함 [X점: 도전 인원수만큼 감점/위험]', score: 'X', driveId: '1i5D1jEXH_X7mlR3ypPRuullH_tGTIDCW', type: 'trap5' },
+      { id: 3, title: '5 포함 (함정)', desc: '5 포함 [X점: 도전 인원수만큼 획득]', score: 'X', driveId: '1i5D1jEXH_X7mlR3ypPRuullH_tGTIDCW', type: 'trap5' },
       { id: 4, title: '9 포함', desc: '9를 포함한 수 [2점]', score: 2, driveId: '1KWj_ywi2EZUiZ3b2uKx0mgNqFgE5PtkQ', type: 'has9' },
       { id: 5, title: '50에 가장 근접', desc: '50에 가장 가까운 수 [2점]', score: 2, driveId: '11WfHY8NtDImWAIM8xwamsQJ-8uYJRr9c', type: 'near50' },
       { id: 6, title: '같은 숫자 2개', desc: 'a=b 인 수 [4점]', score: 4, driveId: '1CDN5zKZ6TG2_m0B_EmC0pWuNjMv-KlnY', type: 'same' },
       { id: 7, title: 'a-b가 최대', desc: '두 자리 수 차(a-b)가 가장 큰 수 [3점]', score: 3, driveId: '11AFCTQA8Lw6ZlhtsX111JB7pCCOxpypy', type: 'maxDiff' },
       { id: 8, title: 'a-b가 최소', desc: '두 자리 수 차(a-b)가 가장 작은 수 [3점]', score: 3, driveId: '1nZZ0W4ujKTB6cJcfSmDly-DuDIXbXTbi', type: 'minDiff' },
-      { id: 9, title: 'a+b=10 (함정)', desc: '합이 10 [X점: 도전 인원수만큼 감점/위험]', score: 'X', driveId: '1_nIQDWOI7jIgBPhewEu0EE3fNRs78vKC', type: 'trap10' },
+      { id: 9, title: 'a+b=10 (함정)', desc: '합이 10 [X점: 도전 인원수만큼 획득]', score: 'X', driveId: '1_nIQDWOI7jIgBPhewEu0EE3fNRs78vKC', type: 'trap10' },
       { id: 10, title: 'a+b가 최대', desc: '두 수의 합이 가장 큰 수 [3점]', score: 3, driveId: '1MKQOhVfkFCkfULz2yKCCJcaDKj4G19iD', type: 'maxSum' },
       { id: 11, title: 'a+b가 최소', desc: '두 수의 합이 가장 작은 수 [3점]', score: 3, driveId: '1HVU0abBL6p8fP-JfD4hKiRLx-vVSwC8J', type: 'minSum' },
       { id: 12, title: 'a가 b의 배수', desc: '첫 번째 숫자가 두 번째 숫자의 배수 [2점]', score: 2, driveId: '103CXnh7wkt4fuN-LocURSbb8J_MhjV6B', type: 'div' },
@@ -251,14 +251,14 @@
       return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
     }
 
-    // --- 3. 로컬 상태 관리 ---
-    let myRole = null; // 'teacher' | 'student'
+    // --- 3. 상태 관리 변수 ---
+    let myRole = null;
     let myStudentName = '';
     let myBaits = Array(8).fill(null).map(() => ({ a: null, b: null, used: false }));
-    let myWorksheet = Array(16).fill(null);
+    let lastFilledRollIndex = -1; // 학생이 마지막으로 숫자를 채운 회차 번호
     let gameState = {};
 
-    // --- 4. 로그인 / 모드 진입 ---
+    // --- 4. 로그인 / 진입 ---
     function loginAsTeacher() {
       const pw = document.getElementById('teacher-pw-input').value;
       if (pw === '1234') {
@@ -283,11 +283,9 @@
       document.getElementById('view-login').classList.add('hidden');
       document.getElementById('view-student').classList.remove('hidden');
 
-      // Firebase 학생 목록에 등록
       db.ref(`underwater/students/${myStudentName}`).update({
         name: myStudentName,
-        score: 0,
-        baitsLeft: 8
+        score: 0
       });
 
       renderBaitSlots();
@@ -299,9 +297,8 @@
       location.reload();
     }
 
-    // --- 5. Firebase 실시간 동기화 ---
+    // --- 5. Firebase 동기화 ---
     function initFirebaseSync() {
-      // 1) 게임 글로벌 상태 동기화
       db.ref('underwater/game').on('value', snapshot => {
         gameState = snapshot.val() || {
           diceRolls: [],
@@ -312,7 +309,6 @@
         updateViewsByGameState();
       });
 
-      // 2) 학생 실시간 현황 동기화 (교사용)
       db.ref('underwater/students').on('value', snapshot => {
         const data = snapshot.val() || {};
         renderTeacherStudentList(data);
@@ -321,7 +317,6 @@
         }
       });
 
-      // 3) 현재 라운드 제출 현황 동기화
       db.ref('underwater/submissions').on('value', snapshot => {
         const subs = snapshot.val() || {};
         const count = Object.keys(subs).length;
@@ -349,7 +344,6 @@
       const currentRound = gameState.currentRound || 0;
       const card = FISH_CARDS.find(c => c.id === gameState.currentCardId);
 
-      // 교사 화면 업데이트
       if (myRole === 'teacher') {
         document.getElementById('t-dice-count').textContent = rolls.length;
         document.getElementById('t-last-dice').textContent = rolls.length > 0 ? rolls[rolls.length - 1] : '-';
@@ -371,10 +365,12 @@
         }
       }
 
-      // 학생 화면 업데이트
       if (myRole === 'student') {
         document.getElementById('s-incoming-dice').textContent = rolls.length > 0 ? rolls[rolls.length - 1] : '-';
         document.getElementById('s-round-text').textContent = `ROUND ${currentRound} / 16`;
+        
+        // 새로운 주사위가 굴려졌을 때 슬롯 입력 상태 갱신
+        renderBaitSlots();
 
         const sImg = document.getElementById('s-card-img');
         const sPh = document.getElementById('s-card-placeholder');
@@ -393,7 +389,7 @@
       }
     }
 
-    // --- 6. 교사 기능 로직 ---
+    // --- 6. 교사 기능 ---
     function rollTeacherDice() {
       const rolls = gameState.diceRolls || [];
       if (rolls.length >= 16) {
@@ -422,7 +418,6 @@
       const nextCard = remainingCards[Math.floor(Math.random() * remainingCards.length)];
       usedIds.push(nextCard.id);
 
-      // 이전 라운드 제출함 초기화 및 새 라운드 시작
       db.ref('underwater/submissions').remove();
       db.ref('underwater/game').update({
         currentRound: currentRound,
@@ -431,7 +426,6 @@
       });
     }
 
-    // 3인 이상 중복 탈락 및 최적 조건 점수 부여 판정
     function judgeRound() {
       const card = FISH_CARDS.find(c => c.id === gameState.currentCardId);
       if (!card) {
@@ -443,24 +437,22 @@
         const subs = snapshot.val() || {};
         const entries = Object.values(subs);
 
-        // 1. 도전한 사람과 포기한 사람 분리
         const challengers = entries.filter(e => !e.passed);
         
-        // 2. 번호별 빈도수 계산
+        // 번호별 빈도수 계산
         const freq = {};
         challengers.forEach(c => { freq[c.val] = (freq[c.val] || 0) + 1; });
 
-        // 3. 3인 이상 중복 탈락 처리
+        // 3인 이상 중복 탈락
         let validList = challengers.filter(c => freq[c.val] < 3);
 
-        // 4. 카드 조건에 맞게 정렬
+        // 카드 조건 정렬
         validList = sortChallengersByRule(validList, card);
 
-        // 5. 우승자 1~2명 선정
+        // 1~2등 우승자 선정
         const winners = validList.slice(0, 2);
         const winnerNames = winners.map(w => w.studentName);
 
-        // Firebase 각 학생 점수 및 결과 업데이트
         db.ref('underwater/students').once('value', sSnap => {
           const students = sSnap.val() || {};
           Object.keys(students).forEach(name => {
@@ -474,7 +466,7 @@
               mark = '중복';
             } else if (winnerNames.includes(name)) {
               if (card.score === 'X') {
-                gained = challengers.length; // 함정 카드 점수: 도전 인원수만큼 획득
+                gained = challengers.length;
               } else {
                 gained = card.score;
               }
@@ -484,13 +476,12 @@
             const newScore = (students[name].score || 0) + gained;
             db.ref(`underwater/students/${name}`).update({ score: newScore });
 
-            // 학생 개인 시트에 라운드 결과 기록 발송
             db.ref(`underwater/history/${name}/${gameState.currentRound}`).set({
               val: sub ? sub.val : 'X',
               result: mark
             });
           });
-          alert(`라운드 채점 완료!\n성공자: ${winnerNames.length > 0 ? winnerNames.join(', ') : '없음'}`);
+          alert(`채점 완료!\n성공자: ${winnerNames.length > 0 ? winnerNames.join(', ') : '없음'}`);
         });
       });
     }
@@ -565,11 +556,16 @@
       });
     }
 
-    // --- 7. 학생 기능 로직 ---
+    // --- 7. 학생 기능 ---
     function renderBaitSlots() {
       const container = document.getElementById('bait-slots-container');
+      if (!container) return;
       container.innerHTML = '';
       let filledCount = 0;
+
+      const rolls = gameState.diceRolls || [];
+      const currentRollIndex = rolls.length - 1;
+      const isAlreadyFilledThisTurn = (currentRollIndex !== -1 && lastFilledRollIndex === currentRollIndex);
 
       myBaits.forEach((bait, idx) => {
         if (bait.a !== null) filledCount++;
@@ -577,13 +573,17 @@
 
         const div = document.createElement('div');
         div.className = `p-2 rounded border bg-slate-800 flex flex-col items-center gap-1 ${bait.used ? 'slot-used' : 'border-slate-600'}`;
+        
+        const btnClassA = bait.a !== null ? 'bg-slate-900 border-slate-700 text-cyan-200 cursor-not-allowed' : (isAlreadyFilledThisTurn ? 'bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-900 hover:bg-cyan-950 border-cyan-500 text-cyan-200 cursor-pointer');
+        const btnClassB = bait.b !== null ? 'bg-slate-900 border-slate-700 text-cyan-200 cursor-not-allowed' : (isAlreadyFilledThisTurn ? 'bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-900 hover:bg-cyan-950 border-cyan-500 text-cyan-200 cursor-pointer');
+
         div.innerHTML = `
           <span class="text-[10px] text-cyan-400 font-bold">미끼 ${idx + 1}</span>
           <div class="flex gap-1">
-            <button onclick="fillBaitNumber(${idx}, 'a')" class="w-6 h-7 rounded bg-slate-900 border border-cyan-700 font-black text-sm text-cyan-200">
+            <button onclick="fillBaitNumber(${idx}, 'a')" class="w-6 h-7 rounded border font-black text-sm transition ${btnClassA}">
               ${bait.a !== null ? bait.a : ''}
             </button>
-            <button onclick="fillBaitNumber(${idx}, 'b')" class="w-6 h-7 rounded bg-slate-900 border border-cyan-700 font-black text-sm text-cyan-200">
+            <button onclick="fillBaitNumber(${idx}, 'b')" class="w-6 h-7 rounded border font-black text-sm transition ${btnClassB}">
               ${bait.b !== null ? bait.b : ''}
             </button>
           </div>
@@ -592,10 +592,15 @@
       });
 
       const badge = document.getElementById('s-bait-lock-badge');
-      badge.textContent = `미끼 제작 (${filledCount}/16)`;
-      if (filledCount === 16) {
-        badge.textContent = '제작 완료 (잠김)';
-        badge.className = 'text-[11px] text-emerald-400 font-bold';
+      if (badge) {
+        badge.textContent = `미끼 제작 (${filledCount}/16)`;
+        if (filledCount === 16) {
+          badge.textContent = '제작 완료 (잠김)';
+          badge.className = 'text-[11px] text-emerald-400 font-bold';
+        } else if (isAlreadyFilledThisTurn) {
+          badge.textContent = `입력 완료 (선생님 주사위 대기 중...)`;
+          badge.className = 'text-[11px] text-amber-400 font-bold';
+        }
       }
       updateBaitDropdown();
     }
@@ -606,20 +611,31 @@
         alert('아직 선생님이 뽑은 주사위 숫자가 없습니다.');
         return;
       }
-      const currentNumber = rolls[rolls.length - 1];
 
-      // 이미 채워진 칸은 수정 불가
-      if (myBaits[slotIdx][position] !== null) {
-        alert('이미 적은 칸은 수정할 수 없습니다!');
+      const currentRollIndex = rolls.length - 1;
+
+      // 1) 이번 회차 주사위를 이미 입력했는지 확인
+      if (lastFilledRollIndex === currentRollIndex) {
+        alert('이번 주사위 숫자는 이미 기록했습니다! 선생님이 다음 주사위를 굴릴 때까지 기다려주세요.');
         return;
       }
 
-      myBaits[slotIdx][position] = currentNumber;
+      // 2) 이미 채워진 칸인지 확인
+      if (myBaits[slotIdx][position] !== null) {
+        alert('이미 숫자가 적힌 칸은 수정할 수 없습니다!');
+        return;
+      }
+
+      // 숫자 기록 및 턴 잠금
+      myBaits[slotIdx][position] = rolls[currentRollIndex];
+      lastFilledRollIndex = currentRollIndex;
+
       renderBaitSlots();
     }
 
     function updateBaitDropdown() {
       const select = document.getElementById('s-bait-select');
+      if (!select) return;
       select.innerHTML = '<option value="">-- 미끼를 고르세요 --</option>';
 
       myBaits.forEach((b, idx) => {
@@ -656,7 +672,7 @@
       }
 
       const targetBait = myBaits[chosenIdx];
-      targetBait.used = true; // 1회 사용 시 소모
+      targetBait.used = true;
 
       db.ref(`underwater/submissions/${myStudentName}`).set({
         studentName: myStudentName,
@@ -671,6 +687,7 @@
 
     function renderWorksheet() {
       const container = document.getElementById('s-worksheet-table');
+      if (!container) return;
       container.innerHTML = '';
       for (let i = 1; i <= 16; i++) {
         const div = document.createElement('div');
@@ -684,7 +701,6 @@
         container.appendChild(div);
       }
 
-      // 내 개인 결과 기록 감시
       db.ref(`underwater/history/${myStudentName}`).on('value', snapshot => {
         const hist = snapshot.val() || {};
         Object.keys(hist).forEach(roundNum => {
