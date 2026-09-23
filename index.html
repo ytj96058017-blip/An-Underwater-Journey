@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>언더워터 항해기</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -11,205 +11,266 @@
   <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
   <style>
     body {
-      background-color: #08121e;
+      background-color: #07111e;
       color: #e2e8f0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", Roboto, sans-serif;
+      touch-action: manipulation;
     }
     .slot-used {
-      opacity: 0.35;
+      opacity: 0.3;
       text-decoration: line-through;
       pointer-events: none;
-      filter: grayscale(80%);
+      filter: grayscale(100%);
+    }
+    /* 모바일 터치 피드백 개선 */
+    button:active {
+      transform: scale(0.97);
+    }
+    /* 스크롤바 커스텀 */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1e293b;
+      border-radius: 3px;
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-start p-3 sm:p-6">
+<body class="min-h-screen flex flex-col items-center justify-start p-2 sm:p-4 pb-12 select-none">
 
-  <!-- ================= 1. 로그인 / 입장 화면 ================= -->
-  <div id="view-login" class="w-full max-w-md bg-slate-900 border border-cyan-800/80 rounded-2xl p-6 shadow-2xl mt-12 text-center">
-    <h1 class="text-3xl font-black text-cyan-400 mb-2">언더워터 항해기</h1>
-    <p class="text-xs text-slate-400 mb-6">바닷속 숫자 낚시 교실 웹앱</p>
+  <!-- ================= 1. 로그인 / 입장 화면 (반응형) ================= -->
+  <div id="view-login" class="w-full max-w-sm sm:max-w-md bg-slate-900/95 border border-cyan-800/80 rounded-2xl p-5 sm:p-6 shadow-2xl mt-6 sm:mt-12 text-center backdrop-blur">
+    <div class="inline-block p-2 rounded-full bg-cyan-950 border border-cyan-500/40 mb-3">
+      <span class="text-2xl">🌊</span>
+    </div>
+    <h1 class="text-2xl sm:text-3xl font-black text-cyan-400 tracking-tight">언더워터 항해기</h1>
+    <p class="text-xs text-slate-400 mt-1 mb-6">바닷속 숫자 낚시 · 교실 실시간 웹앱</p>
 
     <!-- 학생 입장 -->
-    <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 mb-4 text-left">
-      <label class="block text-xs font-bold text-cyan-300 mb-1">학생 참가자</label>
+    <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 mb-4 text-left shadow-inner">
+      <label class="block text-xs font-bold text-cyan-300 mb-1.5">학생 참가자</label>
       <div class="flex gap-2">
-        <input id="student-name-input" type="text" placeholder="이름을 입력하세요" class="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400" />
-        <button onclick="loginAsStudent()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-4 py-2 rounded text-sm transition">
+        <input id="student-name-input" type="text" placeholder="이름을 입력하세요" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-cyan-400" />
+        <button onclick="loginAsStudent()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-4 py-2.5 rounded-lg text-sm transition">
           입장
         </button>
       </div>
     </div>
 
     <!-- 교사 입장 -->
-    <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 text-left">
-      <label class="block text-xs font-bold text-amber-300 mb-1">선생님 모드 (관리자)</label>
+    <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 text-left shadow-inner">
+      <label class="block text-xs font-bold text-amber-300 mb-1.5">선생님 관리자</label>
       <div class="flex gap-2">
-        <input id="teacher-pw-input" type="password" placeholder="비밀번호 1234" class="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" />
-        <button onclick="loginAsTeacher()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded text-sm transition">
+        <input id="teacher-pw-input" type="password" placeholder="비밀번호 1234" class="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-amber-400" />
+        <button onclick="loginAsTeacher()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2.5 rounded-lg text-sm transition">
           교사 입장
         </button>
       </div>
     </div>
   </div>
 
-  <!-- ================= 2. 교사 화면 ================= -->
-  <div id="view-teacher" class="w-full max-w-5xl hidden flex-col gap-5">
-    <header class="flex justify-between items-center bg-slate-900 p-4 rounded-xl border border-amber-500/50">
+  <!-- ================= 2. 교사 제어 화면 (모바일/PC 겸용) ================= -->
+  <div id="view-teacher" class="w-full max-w-4xl hidden flex-col gap-4">
+    <!-- 헤더 바 -->
+    <header class="flex justify-between items-center bg-slate-900 p-3 sm:p-4 rounded-xl border border-amber-500/40 shadow-md">
       <div>
-        <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">Teacher Console</span>
-        <h2 class="text-xl font-black text-white">언더워터 항해기 진행 제어기</h2>
+        <span class="text-[10px] font-bold text-amber-400 uppercase tracking-widest block">Teacher Console</span>
+        <h2 class="text-base sm:text-lg font-black text-white">진행 및 학생 모니터링</h2>
       </div>
       <div class="flex gap-2">
-        <button onclick="resetGame()" class="bg-rose-700 hover:bg-rose-600 text-white text-xs font-bold px-3 py-2 rounded transition">
-          전체 초기화 (새 게임)
+        <button onclick="resetGame()" class="bg-rose-800/90 hover:bg-rose-700 text-white text-xs font-bold px-2.5 py-1.5 rounded transition">
+          초기화
         </button>
-        <button onclick="logout()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-2 rounded">
-          로그아웃
+        <button onclick="logout()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-2.5 py-1.5 rounded">
+          나가기
         </button>
       </div>
     </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-      <!-- 좌측 2열: 제어판 -->
-      <div class="md:col-span-2 flex flex-col gap-4">
-        <!-- 단계 1: 주사위 추첨 -->
-        <div class="bg-slate-800/90 p-4 rounded-xl border border-slate-700">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="font-bold text-sm text-cyan-300">1단계: 10면체 주사위 추첨 (총 16회)</h3>
-            <span class="text-xs text-slate-300 font-mono">추첨 진행: <strong id="t-dice-count" class="text-amber-400">0</strong> / 16</span>
+    <!-- 1단계: 주사위 굴리기 및 실시간 학생 입력 확인 패널 -->
+    <section class="bg-slate-900/90 p-4 rounded-xl border border-cyan-800/70 shadow-lg">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-sm text-cyan-300 flex items-center gap-1.5">
+          <span>🎲</span> 1단계: 주사위 추첨 (총 16회)
+        </h3>
+        <span class="text-xs font-mono text-cyan-200">진행: <strong id="t-dice-count" class="text-amber-400 text-sm">0</strong> / 16</span>
+      </div>
+
+      <div class="flex flex-col sm:flex-row items-center gap-4 bg-slate-950/70 p-3.5 rounded-lg border border-slate-800">
+        <!-- 최근 나온 주사위 -->
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+          <div class="text-center">
+            <span class="text-[10px] text-slate-400 block mb-1">뽑은 주사위</span>
+            <div id="t-last-dice" class="w-16 h-16 rounded-xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-3xl font-black text-cyan-300 shadow-inner">
+              -
+            </div>
           </div>
-          <div class="flex items-center gap-4 bg-slate-900/80 p-4 rounded-lg border border-slate-700">
-            <div class="text-center">
-              <span class="text-[11px] text-slate-400 block mb-1">최근 나온 숫자</span>
-              <div id="t-last-dice" class="w-16 h-16 rounded-xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-4xl font-black text-cyan-300">
-                -
-              </div>
-            </div>
-            <div class="flex-1">
-              <button id="btn-roll-dice" onclick="rollTeacherDice()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg text-sm transition">
-                주사위 굴리기 (0 ~ 9)
-              </button>
-              <p class="text-[11px] text-slate-400 mt-2">학생들이 이 숫자를 보고 자신의 8개 미끼 칸 중 한 곳에 적습니다.</p>
-            </div>
+          <!-- 상태 및 버튼 (모바일 정렬) -->
+          <div class="flex-1 sm:hidden flex flex-col gap-1 text-right">
+            <span id="t-mobile-dice-status" class="text-xs font-bold text-amber-300">대기 중</span>
+            <span id="t-mobile-dice-rate" class="text-[11px] text-slate-400 font-mono">0 / 0 명 완료</span>
           </div>
         </div>
 
-        <!-- 단계 2: 심해어 낚시 진행 -->
-        <div class="bg-slate-800/90 p-4 rounded-xl border border-slate-700">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="font-bold text-sm text-emerald-300">2단계: 심해어 출현 및 판정 (총 16판)</h3>
-            <span class="text-xs text-slate-300 font-mono">현재: <strong id="t-round-display" class="text-emerald-400">0</strong> / 16판</span>
+        <div class="flex-1 w-full flex flex-col gap-2">
+          <div class="hidden sm:flex justify-between items-center text-xs">
+            <span id="t-dice-status-msg" class="font-bold text-amber-300">대기 중</span>
+            <span id="t-dice-completion-rate" class="font-mono text-slate-300">0 / 0 명 완료</span>
           </div>
-
-          <div class="flex flex-col sm:flex-row gap-4 items-center bg-slate-900/80 p-4 rounded-lg border border-slate-700">
-            <div class="w-40 h-56 bg-slate-950 border border-slate-600 rounded-lg overflow-hidden flex items-center justify-center relative">
-              <img id="t-card-img" src="" class="w-full h-full object-cover hidden" alt="심해어 카드" />
-              <div id="t-card-empty" class="text-xs text-slate-500 text-center p-2">심해어 대기 중</div>
-            </div>
-            <div class="flex-1 flex flex-col gap-3 w-full">
-              <div>
-                <h4 id="t-card-title" class="text-lg font-black text-amber-300">출현 심해어 없음</h4>
-                <p id="t-card-desc" class="text-xs text-slate-300 mt-1">심해어 등장 버튼을 눌러 라운드를 시작하세요.</p>
-              </div>
-              <div class="flex gap-2">
-                <button id="btn-spawn-fish" onclick="spawnFishCard()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded text-sm transition">
-                  심해어 등장!
-                </button>
-                <button id="btn-judge-round" onclick="judgeRound()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded text-sm transition">
-                  제출 마감 및 자동 채점
-                </button>
-              </div>
-              <div id="t-submit-status" class="text-xs text-cyan-300 font-medium">제출 완료 인원: 0명</div>
-            </div>
-          </div>
+          <button id="btn-roll-dice" onclick="rollTeacherDice()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg text-sm transition shadow-md disabled:bg-slate-700 disabled:text-slate-500 disabled:cursor-not-allowed">
+            주사위 굴리기 (0 ~ 9)
+          </button>
         </div>
       </div>
 
-      <!-- 우측 1열: 실시간 학생 현황판 -->
-      <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col h-[520px]">
-        <h3 class="font-bold text-sm text-amber-300 border-b border-slate-700 pb-2 mb-3">학생 참가 및 점수 현황</h3>
-        <div id="teacher-student-list" class="flex-1 overflow-y-auto space-y-2 pr-1">
-          <!-- 학생 리스트 -->
+      <!-- 실시간 학생 미끼 배치 현황 체크리스트 (누가 넣었고 안 넣었는지 한눈에 파악) -->
+      <div class="mt-3 pt-3 border-t border-slate-800">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-bold text-slate-300">이번 주사위 번호 학생 입력 체크:</span>
+          <span id="t-wait-all-alert" class="text-[11px] font-bold text-rose-400 hidden">⚠️ 아직 입력하지 않은 학생이 있습니다</span>
+        </div>
+        <div id="t-student-dice-chips" class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+          <!-- 학생별 배지 동적 생성 -->
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- 2단계: 심해어 출현 및 판정 -->
+    <section class="bg-slate-900/90 p-4 rounded-xl border border-emerald-800/70 shadow-lg">
+      <div class="flex justify-between items-center mb-3">
+        <h3 class="font-bold text-sm text-emerald-300 flex items-center gap-1.5">
+          <span>🐟</span> 2단계: 심해어 낚시 진행 (총 16판)
+        </h3>
+        <span class="text-xs font-mono text-emerald-200">현재: <strong id="t-round-display" class="text-emerald-400 text-sm">0</strong> / 16판</span>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-4 items-center bg-slate-950/70 p-3.5 rounded-lg border border-slate-800">
+        <!-- 카드 이미지 (모바일 비율 최적화) -->
+        <div class="w-36 h-48 sm:w-40 sm:h-56 bg-slate-900 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center relative shrink-0">
+          <img id="t-card-img" src="" class="w-full h-full object-cover hidden" alt="심해어 카드" />
+          <div id="t-card-empty" class="text-xs text-slate-500 text-center p-2">심해어 대기 중</div>
+        </div>
+
+        <div class="flex-1 flex flex-col gap-3 w-full">
+          <div>
+            <h4 id="t-card-title" class="text-base sm:text-lg font-black text-amber-300">출현 심해어 없음</h4>
+            <p id="t-card-desc" class="text-xs text-slate-300 mt-0.5">심해어 등장 버튼을 눌러 라운드를 시작하세요.</p>
+          </div>
+
+          <div class="flex gap-2">
+            <button id="btn-spawn-fish" onclick="spawnFishCard()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg text-xs sm:text-sm transition">
+              심해어 등장!
+            </button>
+            <button id="btn-judge-round" onclick="judgeRound()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg text-xs sm:text-sm transition">
+              제출 마감 및 자동 채점
+            </button>
+          </div>
+
+          <div class="flex justify-between items-center bg-slate-900 px-3 py-2 rounded border border-slate-800 text-xs">
+            <span class="text-slate-400">도전/포기 제출:</span>
+            <span id="t-submit-status" class="font-bold text-cyan-300">0 / 0 명</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 학생 전체 순위 및 실시간 점수판 -->
+    <section class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
+        <h3 class="font-bold text-xs sm:text-sm text-amber-300">학생 참가자 실시간 점수 순위표</h3>
+        <span id="t-total-student-count" class="text-xs text-slate-400">총 0명</span>
+      </div>
+      <div id="teacher-student-list" class="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+        <!-- 학생 순위 카드 -->
+      </div>
+    </section>
   </div>
 
-  <!-- ================= 3. 학생 화면 ================= -->
-  <div id="view-student" class="w-full max-w-2xl hidden flex-col gap-5">
-    <header class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-cyan-800">
+  <!-- ================= 3. 학생 모바일 화면 ================= -->
+  <div id="view-student" class="w-full max-w-md hidden flex-col gap-3.5">
+    <!-- 학생 상단 헤더 바 -->
+    <header class="flex justify-between items-center bg-slate-900/95 p-3 rounded-xl border border-cyan-800/80 shadow-md">
       <div>
-        <span class="text-[11px] text-cyan-400 font-semibold block">플레이어</span>
-        <h2 id="s-display-name" class="text-lg font-black text-white">-</h2>
+        <span class="text-[10px] text-cyan-400 font-semibold block">플레이어</span>
+        <h2 id="s-display-name" class="text-base font-black text-white truncate max-w-[150px]">-</h2>
       </div>
       <div class="text-right">
-        <span class="text-[11px] text-amber-400 block">내 총 획득 점수</span>
-        <span class="text-xl font-black text-amber-300"><strong id="s-total-score">0</strong>점</span>
+        <span class="text-[10px] text-amber-400 block">획득 점수</span>
+        <span class="text-lg font-black text-amber-300"><strong id="s-total-score">0</strong>점</span>
       </div>
     </header>
 
-    <!-- 주사위 번호 안내 -->
-    <div class="bg-cyan-950/80 border border-cyan-500/60 p-3 rounded-xl flex items-center justify-between">
+    <!-- 선생님이 뽑은 주사위 알림 배너 -->
+    <div class="bg-gradient-to-r from-cyan-950 to-slate-900 border border-cyan-500/60 p-3 rounded-xl flex items-center justify-between shadow-md">
       <div>
-        <span class="text-xs text-cyan-300 block">선생님이 뽑은 주사위 번호</span>
-        <span class="text-[11px] text-slate-400">아래 8개 미끼 칸 중 비어있는 칸을 눌러 1곳에 배치하세요.</span>
+        <div class="flex items-center gap-1.5">
+          <span class="text-xs font-bold text-cyan-300">선생님이 뽑은 주사위</span>
+          <span id="s-roll-turn-tag" class="text-[10px] px-1.5 py-0.2 rounded bg-cyan-900 text-cyan-200 font-mono">0회차</span>
+        </div>
+        <p id="s-dice-action-guide" class="text-[11px] text-slate-300 mt-0.5">미끼 빈칸 1곳을 눌러 배치하세요.</p>
       </div>
-      <div id="s-incoming-dice" class="w-12 h-12 rounded-lg bg-cyan-900 border-2 border-cyan-400 text-cyan-200 font-black text-2xl flex items-center justify-center">
+      <div id="s-incoming-dice" class="w-12 h-12 rounded-xl bg-cyan-950 border-2 border-cyan-400 text-cyan-300 font-black text-2xl flex items-center justify-center shadow-lg">
         -
       </div>
     </div>
 
-    <!-- 미끼 제작 슬롯 8개 -->
-    <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
-      <div class="flex justify-between items-center mb-2">
-        <h3 class="text-xs font-bold text-cyan-300">내 8개 미끼함</h3>
-        <span id="s-bait-lock-badge" class="text-[11px] text-slate-400 font-bold">미끼 제작 중 (0/16)</span>
+    <!-- 미끼함 (2열 x 4행 그리드로 모바일 터치 접근성 극대화) -->
+    <section class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700 shadow-md">
+      <div class="flex justify-between items-center mb-2.5">
+        <h3 class="text-xs font-bold text-cyan-300 flex items-center gap-1">
+          <span>🪱</span> 내 8개 미끼함
+        </h3>
+        <span id="s-bait-lock-badge" class="text-[11px] text-slate-400 font-bold">미끼 제작 (0/16)</span>
       </div>
       <div id="bait-slots-container" class="grid grid-cols-4 gap-2">
-        <!-- 슬롯 동적 생성 -->
+        <!-- 8개 슬롯 동적 생성 -->
       </div>
-    </div>
+    </section>
 
-    <!-- 심해어 카드 확인 및 도전/포기 -->
-    <div class="bg-slate-900/90 p-4 rounded-xl border border-cyan-600/60 flex flex-col sm:flex-row gap-4 items-center shadow-lg">
-      <div class="w-36 h-52 bg-slate-950 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center">
-        <img id="s-card-img" src="" class="w-full h-full object-cover hidden" alt="심해어 카드" />
-        <div id="s-card-placeholder" class="text-xs text-slate-500 text-center p-2">심해어 대기 중</div>
-      </div>
-      <div class="flex-1 w-full flex flex-col gap-3">
-        <div>
-          <span class="text-[11px] font-mono text-cyan-400" id="s-round-text">ROUND 0 / 16</span>
-          <h4 id="s-card-title" class="text-base font-black text-amber-300">심해어가 곧 나타납니다</h4>
-          <p id="s-card-desc" class="text-xs text-slate-300">-</p>
+    <!-- 현재 출현한 심해어 카드 확인 및 도전 (모바일 맞춤) -->
+    <section class="bg-slate-900/95 p-3.5 rounded-xl border border-cyan-600/60 shadow-lg flex flex-col gap-3">
+      <div class="flex gap-3 items-center">
+        <!-- 작은 썸네일 카드 -->
+        <div class="w-24 h-32 bg-slate-950 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
+          <img id="s-card-img" src="" class="w-full h-full object-cover hidden" alt="심해어 카드" />
+          <div id="s-card-placeholder" class="text-[10px] text-slate-500 text-center p-1">심해어<br>대기 중</div>
         </div>
 
-        <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
-          <span class="text-[11px] text-slate-400 block mb-1">사용할 미끼 선택:</span>
-          <select id="s-bait-select" class="w-full bg-slate-800 text-white rounded p-2 text-xs border border-slate-700 focus:outline-none focus:border-cyan-400">
-            <option value="">-- 미끼를 고르세요 --</option>
-          </select>
+        <div class="flex-1 min-w-0">
+          <span class="text-[10px] font-mono text-cyan-400 font-bold" id="s-round-text">ROUND 0 / 16</span>
+          <h4 id="s-card-title" class="text-sm font-black text-amber-300 truncate mt-0.5">심해어 대기 중</h4>
+          <p id="s-card-desc" class="text-[11px] text-slate-300 mt-1 leading-snug break-words line-clamp-3">-</p>
         </div>
-
-        <div class="flex gap-2">
-          <button id="btn-student-submit" onclick="submitStudentAction(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded text-xs transition">
-            도전하기 (미끼 투척)
-          </button>
-          <button id="btn-student-pass" onclick="submitStudentAction(true)" class="bg-rose-800 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded text-xs transition">
-            포기 (X)
-          </button>
-        </div>
-        <div id="s-my-submission-msg" class="text-xs font-semibold text-center text-cyan-300"></div>
       </div>
-    </div>
 
-    <!-- 16판 기록표 -->
-    <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
+      <!-- 미끼 선택 셀렉트 박스 -->
+      <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
+        <label class="text-[10px] text-slate-400 block mb-1">사용할 완성된 미끼 (ab):</label>
+        <select id="s-bait-select" class="w-full bg-slate-900 text-white rounded p-2 text-xs border border-slate-700 focus:outline-none focus:border-cyan-400">
+          <option value="">-- 미끼를 선택하세요 --</option>
+        </select>
+      </div>
+
+      <!-- 액션 버튼 -->
+      <div class="flex gap-2">
+        <button id="btn-student-submit" onclick="submitStudentAction(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg text-xs transition shadow">
+          도전하기 (미끼 투척)
+        </button>
+        <button id="btn-student-pass" onclick="submitStudentAction(true)" class="bg-rose-800 hover:bg-rose-700 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition shadow">
+          포기 (X)
+        </button>
+      </div>
+      <div id="s-my-submission-msg" class="text-xs font-semibold text-center text-cyan-300 min-h-[16px]"></div>
+    </section>
+
+    <!-- 16판 항해 기록표 (4x4 모바일 그리드) -->
+    <section class="bg-slate-900/90 p-3 rounded-xl border border-slate-700">
       <h3 class="text-xs font-bold text-cyan-300 mb-2">내 항해 기록표 (16판)</h3>
       <div id="s-worksheet-table" class="grid grid-cols-4 sm:grid-cols-8 gap-1.5 text-center text-xs">
-        <!-- 셀 동적 생성 -->
+        <!-- 1~16판 기록 셀 -->
       </div>
-    </div>
+    </section>
   </div>
 
   <script>
@@ -251,12 +312,13 @@
       return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
     }
 
-    // --- 3. 상태 관리 변수 ---
+    // --- 3. 로컬 상태 관리 ---
     let myRole = null;
     let myStudentName = '';
     let myBaits = Array(8).fill(null).map(() => ({ a: null, b: null, used: false }));
-    let lastFilledRollIndex = -1; // 학생이 마지막으로 숫자를 채운 회차 번호
+    let lastFilledRollIndex = -1; // 학생이 마지막으로 숫자를 채운 주사위 회차 번호
     let gameState = {};
+    let studentsCache = {};
 
     // --- 4. 로그인 / 진입 ---
     function loginAsTeacher() {
@@ -283,9 +345,11 @@
       document.getElementById('view-login').classList.add('hidden');
       document.getElementById('view-student').classList.remove('hidden');
 
+      // Firebase 학생 정보 등록 및 주사위 입력 단계 초기화 (-1)
       db.ref(`underwater/students/${myStudentName}`).update({
         name: myStudentName,
-        score: 0
+        score: 0,
+        lastFilledRoll: -1
       });
 
       renderBaitSlots();
@@ -297,8 +361,9 @@
       location.reload();
     }
 
-    // --- 5. Firebase 동기화 ---
+    // --- 5. Firebase 동기화 리스너 ---
     function initFirebaseSync() {
+      // 게임 전체 상태 감시
       db.ref('underwater/game').on('value', snapshot => {
         gameState = snapshot.val() || {
           diceRolls: [],
@@ -309,25 +374,28 @@
         updateViewsByGameState();
       });
 
+      // 학생 명단 및 상태 감시
       db.ref('underwater/students').on('value', snapshot => {
-        const data = snapshot.val() || {};
-        renderTeacherStudentList(data);
-        if (myRole === 'student' && data[myStudentName]) {
-          document.getElementById('s-total-score').textContent = data[myStudentName].score || 0;
+        studentsCache = snapshot.val() || {};
+        renderTeacherStudentMonitoring(studentsCache);
+        if (myRole === 'student' && studentsCache[myStudentName]) {
+          document.getElementById('s-total-score').textContent = studentsCache[myStudentName].score || 0;
         }
       });
 
+      // 낚시 라운드 제출 감시
       db.ref('underwater/submissions').on('value', snapshot => {
         const subs = snapshot.val() || {};
         const count = Object.keys(subs).length;
+        const total = Object.keys(studentsCache).length;
         if (document.getElementById('t-submit-status')) {
-          document.getElementById('t-submit-status').textContent = `제출 완료 인원: ${count}명`;
+          document.getElementById('t-submit-status').textContent = `${count} / ${total} 명`;
         }
         if (myRole === 'student') {
           const mySub = subs[myStudentName];
           const msgEl = document.getElementById('s-my-submission-msg');
           if (mySub) {
-            msgEl.textContent = mySub.passed ? '현재 라운드: [포기(X)] 제출 완료' : `미끼 [${mySub.val}] 도전 제출 완료! 판정 대기 중`;
+            msgEl.textContent = mySub.passed ? '현재 라운드: [포기(X)] 완료' : `미끼 [${mySub.val}] 도전 제출 완료! 판정 대기 중`;
             document.getElementById('btn-student-submit').disabled = true;
             document.getElementById('btn-student-pass').disabled = true;
           } else {
@@ -339,11 +407,14 @@
       });
     }
 
+    // 화면 갱신
     function updateViewsByGameState() {
       const rolls = gameState.diceRolls || [];
+      const currentRollIndex = rolls.length - 1;
       const currentRound = gameState.currentRound || 0;
       const card = FISH_CARDS.find(c => c.id === gameState.currentCardId);
 
+      // 교사 뷰 갱신
       if (myRole === 'teacher') {
         document.getElementById('t-dice-count').textContent = rolls.length;
         document.getElementById('t-last-dice').textContent = rolls.length > 0 ? rolls[rolls.length - 1] : '-';
@@ -363,13 +434,16 @@
           document.getElementById('t-card-title').textContent = '출현 심해어 없음';
           document.getElementById('t-card-desc').textContent = '심해어 등장 버튼을 눌러 라운드를 시작하세요.';
         }
+        renderTeacherStudentMonitoring(studentsCache);
       }
 
+      // 학생 뷰 갱신
       if (myRole === 'student') {
         document.getElementById('s-incoming-dice').textContent = rolls.length > 0 ? rolls[rolls.length - 1] : '-';
         document.getElementById('s-round-text').textContent = `ROUND ${currentRound} / 16`;
-        
-        // 새로운 주사위가 굴려졌을 때 슬롯 입력 상태 갱신
+        document.getElementById('s-roll-turn-tag').textContent = `${rolls.length} / 16회차`;
+
+        // 새 주사위 등장 시 버튼 상태 갱신
         renderBaitSlots();
 
         const sImg = document.getElementById('s-card-img');
@@ -389,16 +463,116 @@
       }
     }
 
-    // --- 6. 교사 기능 ---
+    // --- 6. 교사용 로직: 주사위 잠금 및 모니터링 ---
     function rollTeacherDice() {
       const rolls = gameState.diceRolls || [];
       if (rolls.length >= 16) {
         alert('이미 주사위 16회를 모두 뽑았습니다!');
         return;
       }
+
+      const students = Object.values(studentsCache);
+      const currentRollIndex = rolls.length - 1;
+
+      // 주사위 1회 이상 굴렸을 때, 학생들이 모두 입력했는지 검사
+      if (rolls.length > 0 && students.length > 0) {
+        const notFilledStudents = students.filter(st => (st.lastFilledRoll === undefined || st.lastFilledRoll < currentRollIndex));
+        if (notFilledStudents.length > 0) {
+          const names = notFilledStudents.map(s => s.name).join(', ');
+          alert(`아직 주사위 숫자를 입력하지 않은 학생이 있습니다!\n[미입력 학생]: ${names}\n학생들이 모두 칸에 적은 후 굴려주세요.`);
+          return;
+        }
+      }
+
       const newNum = Math.floor(Math.random() * 10);
       rolls.push(newNum);
       db.ref('underwater/game/diceRolls').set(rolls);
+    }
+
+    function renderTeacherStudentMonitoring(students) {
+      if (myRole !== 'teacher') return;
+
+      const rolls = gameState.diceRolls || [];
+      const currentRollIndex = rolls.length - 1;
+      const studentList = Object.values(students);
+      const totalCount = studentList.length;
+
+      // 1) 상단 주사위 입력 상태 표시기
+      const chipsContainer = document.getElementById('t-student-dice-chips');
+      const waitAlert = document.getElementById('t-wait-all-alert');
+      const statusMsg = document.getElementById('t-dice-status-msg');
+      const rateMsg = document.getElementById('t-dice-completion-rate');
+      const mStatus = document.getElementById('t-mobile-dice-status');
+      const mRate = document.getElementById('t-mobile-dice-rate');
+      const rollBtn = document.getElementById('btn-roll-dice');
+
+      chipsContainer.innerHTML = '';
+      let completedCount = 0;
+
+      if (rolls.length === 0) {
+        statusMsg.textContent = '첫 번째 주사위를 굴려주세요.';
+        mStatus.textContent = '시작 대기';
+        rateMsg.textContent = `${totalCount}명 참가 중`;
+        mRate.textContent = `${totalCount}명 참가`;
+        waitAlert.classList.add('hidden');
+        rollBtn.disabled = false;
+      } else {
+        studentList.forEach(st => {
+          const isDone = (st.lastFilledRoll !== undefined && st.lastFilledRoll >= currentRollIndex);
+          if (isDone) completedCount++;
+
+          const chip = document.createElement('div');
+          chip.className = `px-2 py-1 rounded-md text-xs font-bold flex items-center gap-1 border ${
+            isDone 
+              ? 'bg-emerald-950/80 border-emerald-500/60 text-emerald-300'
+              : 'bg-rose-950/80 border-rose-500/60 text-rose-300 animate-pulse'
+          }`;
+          chip.innerHTML = `
+            <span>${isDone ? '✓' : '…'}</span>
+            <span>${st.name}</span>
+          `;
+          chipsContainer.appendChild(chip);
+        });
+
+        const isAllDone = (totalCount > 0 && completedCount === totalCount);
+        rateMsg.textContent = `${completedCount} / ${totalCount} 명 완료`;
+        mRate.textContent = `${completedCount} / ${totalCount} 명`;
+
+        if (isAllDone) {
+          statusMsg.textContent = '✅ 모든 학생이 입력을 완료했습니다! 다음 주사위를 굴리세요.';
+          statusMsg.className = 'font-bold text-emerald-300';
+          mStatus.textContent = '입력 완료!';
+          mStatus.className = 'text-xs font-bold text-emerald-300';
+          waitAlert.classList.add('hidden');
+          rollBtn.disabled = false;
+        } else {
+          statusMsg.textContent = '⏳ 학생들이 주사위 번호를 미끼에 적는 중입니다...';
+          statusMsg.className = 'font-bold text-amber-300';
+          mStatus.textContent = '학생 입력 중';
+          mStatus.className = 'text-xs font-bold text-amber-300';
+          waitAlert.classList.remove('hidden');
+          rollBtn.disabled = true; // 아직 안 적은 학생이 있으면 버튼 비활성화
+        }
+      }
+
+      // 2) 하단 학생 점수 순위표 렌더링
+      const rankContainer = document.getElementById('teacher-student-list');
+      rankContainer.innerHTML = '';
+      document.getElementById('t-total-student-count').textContent = `총 ${totalCount}명`;
+
+      const sorted = [...studentList].sort((a, b) => (b.score || 0) - (a.score || 0));
+      sorted.forEach((st, idx) => {
+        const div = document.createElement('div');
+        div.className = 'flex justify-between items-center p-2 rounded-lg bg-slate-800/80 border border-slate-700 text-xs';
+        div.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-5 text-center font-black ${idx === 0 ? 'text-amber-400' : 'text-slate-400'}">${idx + 1}</span>
+            <span class="font-bold text-white">${st.name}</span>
+          </div>
+          <span class="font-black text-cyan-300">${st.score || 0}점</span>
+        `;
+        rankContainer.appendChild(div);
+      });
     }
 
     function spawnFishCard() {
@@ -439,17 +613,14 @@
 
         const challengers = entries.filter(e => !e.passed);
         
-        // 번호별 빈도수 계산
+        // 중복 계산
         const freq = {};
         challengers.forEach(c => { freq[c.val] = (freq[c.val] || 0) + 1; });
 
-        // 3인 이상 중복 탈락
+        // 3명 이상 중복 탈락
         let validList = challengers.filter(c => freq[c.val] < 3);
-
-        // 카드 조건 정렬
         validList = sortChallengersByRule(validList, card);
 
-        // 1~2등 우승자 선정
         const winners = validList.slice(0, 2);
         const winnerNames = winners.map(w => w.studentName);
 
@@ -535,28 +706,7 @@
       }
     }
 
-    function renderTeacherStudentList(students) {
-      const container = document.getElementById('teacher-student-list');
-      if (!container) return;
-      container.innerHTML = '';
-      const arr = Object.values(students);
-      arr.sort((a, b) => (b.score || 0) - (a.score || 0));
-
-      arr.forEach((st, idx) => {
-        const div = document.createElement('div');
-        div.className = 'flex justify-between items-center p-2 rounded bg-slate-800 border border-slate-700 text-xs';
-        div.innerHTML = `
-          <div>
-            <span class="font-bold text-amber-400 mr-2">${idx + 1}위</span>
-            <span class="font-medium text-white">${st.name}</span>
-          </div>
-          <span class="font-bold text-cyan-300">${st.score || 0}점</span>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    // --- 7. 학생 기능 ---
+    // --- 7. 학생용 로직 (모바일 터치 최적화) ---
     function renderBaitSlots() {
       const container = document.getElementById('bait-slots-container');
       if (!container) return;
@@ -572,18 +722,27 @@
         if (bait.b !== null) filledCount++;
 
         const div = document.createElement('div');
-        div.className = `p-2 rounded border bg-slate-800 flex flex-col items-center gap-1 ${bait.used ? 'slot-used' : 'border-slate-600'}`;
+        div.className = `p-1.5 sm:p-2 rounded-lg border bg-slate-800/90 flex flex-col items-center gap-1 ${bait.used ? 'slot-used' : 'border-slate-700'}`;
         
-        const btnClassA = bait.a !== null ? 'bg-slate-900 border-slate-700 text-cyan-200 cursor-not-allowed' : (isAlreadyFilledThisTurn ? 'bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-900 hover:bg-cyan-950 border-cyan-500 text-cyan-200 cursor-pointer');
-        const btnClassB = bait.b !== null ? 'bg-slate-900 border-slate-700 text-cyan-200 cursor-not-allowed' : (isAlreadyFilledThisTurn ? 'bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed' : 'bg-slate-900 hover:bg-cyan-950 border-cyan-500 text-cyan-200 cursor-pointer');
+        const btnBase = "w-7 h-8 sm:w-8 sm:h-9 rounded-md border font-black text-sm transition flex items-center justify-center";
+        const btnClassA = bait.a !== null 
+          ? 'bg-slate-950 border-slate-700 text-cyan-300' 
+          : (isAlreadyFilledThisTurn 
+              ? 'bg-slate-950/40 border-slate-800 text-slate-600 cursor-not-allowed' 
+              : 'bg-slate-900 border-cyan-500/80 text-cyan-200 active:bg-cyan-900');
+        const btnClassB = bait.b !== null 
+          ? 'bg-slate-950 border-slate-700 text-cyan-300' 
+          : (isAlreadyFilledThisTurn 
+              ? 'bg-slate-950/40 border-slate-800 text-slate-600 cursor-not-allowed' 
+              : 'bg-slate-900 border-cyan-500/80 text-cyan-200 active:bg-cyan-900');
 
         div.innerHTML = `
           <span class="text-[10px] text-cyan-400 font-bold">미끼 ${idx + 1}</span>
           <div class="flex gap-1">
-            <button onclick="fillBaitNumber(${idx}, 'a')" class="w-6 h-7 rounded border font-black text-sm transition ${btnClassA}">
+            <button onclick="fillBaitNumber(${idx}, 'a')" class="${btnBase} ${btnClassA}">
               ${bait.a !== null ? bait.a : ''}
             </button>
-            <button onclick="fillBaitNumber(${idx}, 'b')" class="w-6 h-7 rounded border font-black text-sm transition ${btnClassB}">
+            <button onclick="fillBaitNumber(${idx}, 'b')" class="${btnBase} ${btnClassB}">
               ${bait.b !== null ? bait.b : ''}
             </button>
           </div>
@@ -592,14 +751,19 @@
       });
 
       const badge = document.getElementById('s-bait-lock-badge');
+      const guide = document.getElementById('s-dice-action-guide');
       if (badge) {
         badge.textContent = `미끼 제작 (${filledCount}/16)`;
         if (filledCount === 16) {
           badge.textContent = '제작 완료 (잠김)';
           badge.className = 'text-[11px] text-emerald-400 font-bold';
+          guide.textContent = '모든 미끼가 완성되었습니다!';
         } else if (isAlreadyFilledThisTurn) {
-          badge.textContent = `입력 완료 (선생님 주사위 대기 중...)`;
+          badge.textContent = `기록 완료 (대기 중)`;
           badge.className = 'text-[11px] text-amber-400 font-bold';
+          guide.textContent = '기록 완료! 선생님이 다음 주사위를 굴릴 때까지 대기하세요.';
+        } else if (rolls.length > 0) {
+          guide.textContent = '위 주사위 번호를 넣을 빈칸 1곳을 터치하세요.';
         }
       }
       updateBaitDropdown();
@@ -614,21 +778,26 @@
 
       const currentRollIndex = rolls.length - 1;
 
-      // 1) 이번 회차 주사위를 이미 입력했는지 확인
+      // 이번 회차 주사위를 이미 적었는지 확인
       if (lastFilledRollIndex === currentRollIndex) {
-        alert('이번 주사위 숫자는 이미 기록했습니다! 선생님이 다음 주사위를 굴릴 때까지 기다려주세요.');
+        alert('이번 주사위 숫자는 이미 기록했습니다!\n선생님이 다음 주사위를 굴릴 때까지 기다려주세요.');
         return;
       }
 
-      // 2) 이미 채워진 칸인지 확인
+      // 이미 숫자가 채워진 칸인지 확인
       if (myBaits[slotIdx][position] !== null) {
         alert('이미 숫자가 적힌 칸은 수정할 수 없습니다!');
         return;
       }
 
-      // 숫자 기록 및 턴 잠금
+      // 숫자 기록
       myBaits[slotIdx][position] = rolls[currentRollIndex];
       lastFilledRollIndex = currentRollIndex;
+
+      // Firebase 학생 정보에 '몇 회차까지 입력 완료했는지' 저장 -> 교사 화면에 실시간 전송
+      db.ref(`underwater/students/${myStudentName}`).update({
+        lastFilledRoll: currentRollIndex
+      });
 
       renderBaitSlots();
     }
@@ -636,7 +805,7 @@
     function updateBaitDropdown() {
       const select = document.getElementById('s-bait-select');
       if (!select) return;
-      select.innerHTML = '<option value="">-- 미끼를 고르세요 --</option>';
+      select.innerHTML = '<option value="">-- 미끼를 선택하세요 --</option>';
 
       myBaits.forEach((b, idx) => {
         if (b.a !== null && b.b !== null && !b.used) {
@@ -692,11 +861,11 @@
       for (let i = 1; i <= 16; i++) {
         const div = document.createElement('div');
         div.id = `ws-cell-${i}`;
-        div.className = 'p-1.5 rounded bg-slate-800 border border-slate-700 flex flex-col items-center';
+        div.className = 'p-1 rounded-lg bg-slate-800 border border-slate-700 flex flex-col items-center justify-center min-h-[46px]';
         div.innerHTML = `
-          <span class="text-[9px] text-slate-400 font-bold">${i}</span>
-          <span class="text-xs font-mono font-bold text-cyan-300 mt-0.5">-</span>
-          <span class="text-[10px] font-bold text-amber-300 mt-0.5">대기</span>
+          <span class="text-[8px] text-slate-400 font-bold">${i}</span>
+          <span class="text-[11px] font-mono font-bold text-cyan-300 mt-0.5">-</span>
+          <span class="text-[9px] font-bold text-amber-300">대기</span>
         `;
         container.appendChild(div);
       }
