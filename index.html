@@ -167,10 +167,28 @@
             </button>
           </div>
 
-          <div class="flex justify-between items-center bg-slate-900 px-3 py-2 rounded border border-slate-800 text-xs">
-            <span class="text-slate-400">도전/포기 제출:</span>
-            <span id="t-submit-status" class="font-bold text-cyan-300">0 / 0 명</span>
+          <div class="flex flex-col gap-1.5 bg-slate-900 px-3 py-2.5 rounded-lg border border-slate-800 text-xs">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-300 font-semibold">라운드 제출 현황:</span>
+              <span id="t-submit-status" class="font-bold text-cyan-300">0 / 0 명 완료</span>
+            </div>
+            <div class="flex justify-between items-center text-[11px] text-slate-400 font-mono">
+              <span id="t-submit-breakdown">도전 0명 · 포기 0명 · 미제출 0명</span>
+              <span id="t-submit-all-guide" class="text-amber-400 font-bold hidden">⏳ 학생들의 선택을 기다리는 중</span>
+            </div>
           </div>
+        </div>
+      </div>
+
+      <!-- 실시간 학생별 제출 상태 (도전/포기/미제출) 배지 목록 -->
+      <div class="mt-3 pt-3 border-t border-slate-800">
+        <div class="flex justify-between items-center mb-2">
+          <span class="text-xs font-bold text-slate-300">학생별 실시간 선택 현황 (교사용):</span>
+          <span id="t-round-state-badge" class="text-[11px] font-bold text-slate-400">대기 중</span>
+        </div>
+        <div id="t-student-submit-chips" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
+          <!-- 학생별 제출 상태 칩 동적 생성 -->
+          <span class="text-xs text-slate-500">심해어가 등장하면 학생 제출 상태가 여기에 표시됩니다.</span>
         </div>
       </div>
     </section>
@@ -319,6 +337,7 @@
     let lastFilledRollIndex = -1; // 학생이 마지막으로 숫자를 채운 주사위 회차 번호
     let gameState = {};
     let studentsCache = {};
+    let submissionsCache = {};
 
     // --- 4. 로그인 / 진입 ---
     function loginAsTeacher() {
@@ -372,12 +391,14 @@
           usedCardIds: []
         };
         updateViewsByGameState();
+        renderTeacherRoundSubmissions();
       });
 
       // 학생 명단 및 상태 감시
       db.ref('underwater/students').on('value', snapshot => {
         studentsCache = snapshot.val() || {};
         renderTeacherStudentMonitoring(studentsCache);
+        renderTeacherRoundSubmissions();
         if (myRole === 'student' && studentsCache[myStudentName]) {
           document.getElementById('s-total-score').textContent = studentsCache[myStudentName].score || 0;
         }
@@ -385,14 +406,11 @@
 
       // 낚시 라운드 제출 감시
       db.ref('underwater/submissions').on('value', snapshot => {
-        const subs = snapshot.val() || {};
-        const count = Object.keys(subs).length;
-        const total = Object.keys(studentsCache).length;
-        if (document.getElementById('t-submit-status')) {
-          document.getElementById('t-submit-status').textContent = `${count} / ${total} 명`;
-        }
+        submissionsCache = snapshot.val() || {};
+        renderTeacherRoundSubmissions();
+
         if (myRole === 'student') {
-          const mySub = subs[myStudentName];
+          const mySub = submissionsCache[myStudentName];
           const msgEl = document.getElementById('s-my-submission-msg');
           if (mySub) {
             msgEl.textContent = mySub.passed ? '현재 라운드: [포기(X)] 완료' : `미끼 [${mySub.val}] 도전 제출 완료! 판정 대기 중`;
@@ -598,6 +616,90 @@
         currentCardId: nextCard.id,
         usedCardIds: usedIds
       });
+    }
+
+    function renderTeacherRoundSubmissions() {
+      if (myRole !== 'teacher') return;
+
+      const container = document.getElementById('t-student-submit-chips');
+      const statusEl = document.getElementById('t-submit-status');
+      const breakdownEl = document.getElementById('t-submit-breakdown');
+      const guideEl = document.getElementById('t-submit-all-guide');
+      const badgeEl = document.getElementById('t-round-state-badge');
+      if (!container) return;
+
+      const studentList = Object.values(studentsCache);
+      const totalStudents = studentList.length;
+      const subs = submissionsCache || {};
+      const currentRound = gameState.currentRound || 0;
+
+      container.innerHTML = '';
+
+      if (currentRound === 0 || !gameState.currentCardId) {
+        container.innerHTML = '<span class="text-xs text-slate-500">심해어 등장 버튼을 눌러 라운드를 시작하세요.</span>';
+        if (statusEl) statusEl.textContent = '0 / 0 명 완료';
+        if (breakdownEl) breakdownEl.textContent = '대기 중';
+        if (guideEl) guideEl.classList.add('hidden');
+        if (badgeEl) {
+          badgeEl.textContent = '라운드 대기';
+          badgeEl.className = 'text-[11px] font-bold text-slate-400';
+        }
+        return;
+      }
+
+      let challengeCount = 0;
+      let passCount = 0;
+      let pendingCount = 0;
+
+      studentList.forEach(st => {
+        const sub = subs[st.name];
+        const chip = document.createElement('div');
+
+        if (!sub) {
+          // 아직 미제출
+          pendingCount++;
+          chip.className = 'px-2.5 py-1 rounded-md text-xs font-bold flex items-center gap-1.5 border bg-amber-950/70 border-amber-500/60 text-amber-300 animate-pulse';
+          chip.innerHTML = `<span>⏳</span><span>${st.name}</span><span class="text-[10px] text-amber-400/80">(고민 중)</span>`;
+        } else if (sub.passed) {
+          // 포기
+          passCount++;
+          chip.className = 'px-2.5 py-1 rounded-md text-xs font-bold flex items-center gap-1.5 border bg-rose-950/70 border-rose-500/60 text-rose-300';
+          chip.innerHTML = `<span>✕</span><span>${st.name}</span><span class="text-[10px] text-rose-400/80">[포기]</span>`;
+        } else {
+          // 도전 (미끼 번호 표시)
+          challengeCount++;
+          chip.className = 'px-2.5 py-1 rounded-md text-xs font-bold flex items-center gap-1.5 border bg-emerald-950/80 border-emerald-500/70 text-emerald-300';
+          chip.innerHTML = `<span>🐟</span><span>${st.name}</span><span class="text-[10px] font-mono bg-emerald-900/90 text-emerald-200 px-1 rounded">[도전: ${sub.val}]</span>`;
+        }
+
+        container.appendChild(chip);
+      });
+
+      const submittedTotal = challengeCount + passCount;
+      if (statusEl) statusEl.textContent = `${submittedTotal} / ${totalStudents} 명 완료`;
+      if (breakdownEl) breakdownEl.textContent = `도전 ${challengeCount}명 · 포기 ${passCount}명 · 미제출 ${pendingCount}명`;
+
+      if (totalStudents > 0 && pendingCount === 0) {
+        if (guideEl) {
+          guideEl.textContent = '✅ 전원 제출 완료! 자동 채점을 진행하세요.';
+          guideEl.className = 'text-emerald-400 font-bold block';
+          guideEl.classList.remove('hidden');
+        }
+        if (badgeEl) {
+          badgeEl.textContent = '전원 제출 완료';
+          badgeEl.className = 'text-[11px] font-bold text-emerald-400';
+        }
+      } else {
+        if (guideEl) {
+          guideEl.textContent = `⏳ ${pendingCount}명이 아직 선택 중입니다`;
+          guideEl.className = 'text-amber-400 font-bold block';
+          guideEl.classList.remove('hidden');
+        }
+        if (badgeEl) {
+          badgeEl.textContent = '선택 진행 중';
+          badgeEl.className = 'text-[11px] font-bold text-amber-300';
+        }
+      }
     }
 
     function judgeRound() {
