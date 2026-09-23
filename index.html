@@ -612,6 +612,32 @@
       }
     }
 
+    // 각 심해어 카드별 1차 평가 기준값(Metric) 계산 함수
+    function getItemMetric(item, card) {
+      if (!item || !card) return 0;
+      const d1 = parseInt(item.a, 10);
+      const d2 = parseInt(item.b, 10);
+      const num = parseInt(item.val, 10);
+
+      switch (card.type) {
+        case 'minNum':
+        case 'maxNum':
+          return num;
+        case 'minSum':
+        case 'maxSum':
+          return d1 + d2;
+        case 'minDiff':
+        case 'maxDiff':
+          return Math.abs(d1 - d2);
+        case 'near50':
+          return Math.abs(50 - num);
+        // 그 외 조건부 카드(0/1/5/9 포함, 같은 수, 배수, 합=10):
+        // 조건을 만족한 사람들 사이에서는 두 자리 숫자(num) 크기가 기준
+        default:
+          return num;
+      }
+    }
+
     // 심해어 카드 조건 부합 여부 판별 함수
     function isBaitValidForCard(bait, card) {
       if (!bait || bait.a === null || bait.b === null || !card) return false;
@@ -949,7 +975,7 @@
     function judgeRound() {
       const card = FISH_CARDS.find(c => c.id === gameState.currentCardId);
       if (!card) {
-        alert('진행 중인 심해어 카드가 없습니다.');
+        showCustomAlert('심해어 없음', '진행 중인 심해어 카드가 없습니다.', '⚠️');
         return;
       }
 
@@ -957,15 +983,28 @@
         const subs = snapshot.val() || {};
         const entries = Object.values(subs);
 
+        // 도전 학생들만 추출
         const challengers = entries.filter(e => !e.passed);
-        
-        const freq = {};
-        challengers.forEach(c => { freq[c.val] = (freq[c.val] || 0) + 1; });
 
+        // 번호별 빈도수 계산
+        const freq = {};
+        challengers.forEach(c => {
+          freq[c.val] = (freq[c.val] || 0) + 1;
+        });
+
+        // 3인 이상 중복 탈락
         let validList = challengers.filter(c => freq[c.val] < 3);
+
+        // 카드 조건 정렬 (가장 우수한 학생이 맨 앞 validList[0]으로 정렬됨)
         validList = sortChallengersByRule(validList, card);
 
-        const winners = validList.slice(0, 2);
+        // ★ 1등 및 동점자만 선별 (1등과 동일한 최우수 성적을 낸 학생만 점수 획득, 최대 2명)
+        let winners = [];
+        if (validList.length > 0) {
+          const topMetric = getItemMetric(validList[0], card);
+          const tiedWinners = validList.filter(item => getItemMetric(item, card) === topMetric);
+          winners = tiedWinners.slice(0, 2);
+        }
         const winnerNames = winners.map(w => w.studentName);
 
         const roundPoints = (card.score === 'X') ? challengers.length : Number(card.score);
@@ -998,7 +1037,7 @@
           const resultMsg = winnerNames.length > 0 
             ? `채점 완료!\n성공자: ${winnerNames.join(', ')}\n획득 점수: +${roundPoints}점 (${card.score === 'X' ? '미끼 던진 인원 ' + challengers.length + '명 반영' : '카드 기본 점수'})`
             : '채점 완료!\n조건을 만족한 성공자가 없습니다.';
-          alert(resultMsg);
+          showCustomAlert('채점 결과 안내', resultMsg, winnerNames.length > 0 ? '🏆' : '🌊');
         });
       });
     }
