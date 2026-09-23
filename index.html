@@ -314,9 +314,10 @@
       <!-- 미끼 선택 -->
       <div class="bg-slate-950 p-2 rounded-lg border border-slate-800">
         <label class="text-[10px] text-slate-400 block mb-1">사용할 완성된 미끼 (ab):</label>
-        <select id="s-bait-select" class="w-full bg-slate-900 text-white rounded p-2 text-xs border border-slate-700 focus:outline-none focus:border-cyan-400">
+        <select id="s-bait-select" onchange="onBaitSelectChange()" class="w-full bg-slate-900 text-white rounded p-2 text-xs border border-slate-700 focus:outline-none focus:border-cyan-400">
           <option value="">-- 미끼를 선택하세요 --</option>
         </select>
+        <div id="s-bait-hint-msg" class="text-[11px] mt-1.5 font-bold min-h-[16px]"></div>
       </div>
 
       <!-- 액션 버튼 -->
@@ -361,6 +362,18 @@
           닫기 (미끼 계속 제작)
         </button>
       </div>
+    </div>
+  </div>
+
+  <!-- ================= 5. 커스텀 안내 모달 (alert 대체) ================= -->
+  <div id="custom-alert-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="w-full max-w-xs sm:max-w-sm bg-slate-900 border border-cyan-500/60 rounded-2xl p-5 shadow-2xl text-center flex flex-col gap-3">
+      <div id="custom-alert-icon" class="text-3xl">⚠️</div>
+      <h3 id="custom-alert-title" class="text-sm font-black text-amber-300">알림</h3>
+      <p id="custom-alert-body" class="text-xs text-slate-200 leading-relaxed break-words whitespace-pre-line"></p>
+      <button onclick="closeCustomAlert()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2 rounded-lg text-xs transition shadow mt-1">
+        확인
+      </button>
     </div>
   </div>
 
@@ -580,6 +593,55 @@
       }
     }
 
+    // 커스텀 모달 알림창
+    function showCustomAlert(title, message, icon = '⚠️') {
+      const modal = document.getElementById('custom-alert-modal');
+      if (!modal) return;
+      document.getElementById('custom-alert-title').textContent = title;
+      document.getElementById('custom-alert-body').textContent = message;
+      document.getElementById('custom-alert-icon').textContent = icon;
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+    }
+
+    function closeCustomAlert() {
+      const modal = document.getElementById('custom-alert-modal');
+      if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    // 심해어 카드 조건 부합 여부 판별 함수
+    function isBaitValidForCard(bait, card) {
+      if (!bait || bait.a === null || bait.b === null || !card) return false;
+      const d1 = parseInt(bait.a, 10);
+      const d2 = parseInt(bait.b, 10);
+      const num = d1 * 10 + d2;
+
+      switch (card.type) {
+        case 'has0': return d1 === 0 || d2 === 0;
+        case 'has1': return d1 === 1 || d2 === 1;
+        case 'has5': return d1 === 5 || d2 === 5;
+        case 'has9': return d1 === 9 || d2 === 9;
+        case 'same': return d1 === d2;
+        case 'sum10': return (d1 + d2) === 10;
+        case 'div': return d2 !== 0 && (d1 % d2 === 0);
+        case 'mul5': return num % 5 === 0;
+        case 'mul10': return num % 10 === 0;
+        // 크기 비교/차이/근접 카드는 모든 두 자리 수가 기본적으로 도전 대상
+        case 'near50':
+        case 'maxDiff':
+        case 'minDiff':
+        case 'maxSum':
+        case 'minSum':
+        case 'maxNum':
+        case 'minNum':
+        default:
+          return true;
+      }
+    }
+
     // --- 5. Firebase 동기화 리스너 ---
     function initFirebaseSync() {
       db.ref('underwater/game').on('value', snapshot => {
@@ -653,6 +715,7 @@
         document.getElementById('s-roll-turn-tag').textContent = `${rolls.length} / 16회차`;
 
         renderBaitSlots();
+        updateBaitDropdown();
 
         const sImg = document.getElementById('s-card-img');
         const sPh = document.getElementById('s-card-placeholder');
@@ -1113,23 +1176,74 @@
 
     function updateBaitDropdown() {
       const select = document.getElementById('s-bait-select');
+      const hintMsg = document.getElementById('s-bait-hint-msg');
       if (!select) return;
       select.innerHTML = '<option value="">-- 미끼를 선택하세요 --</option>';
 
+      const currentCard = FISH_CARDS.find(c => c.id === gameState.currentCardId);
+      let validCount = 0;
+      let availableTotal = 0;
+
       myBaits.forEach((b, idx) => {
         if (b.a !== null && b.b !== null && !b.used) {
+          availableTotal++;
           const opt = document.createElement('option');
           opt.value = idx;
-          opt.textContent = `미끼 ${idx + 1}번: [ ${b.a}${b.b} ]`;
+          const valid = isBaitValidForCard(b, currentCard);
+          if (valid) {
+            validCount++;
+            opt.textContent = `미끼 ${idx + 1}번: [ ${b.a}${b.b} ]  ✅ (조건 만족)`;
+          } else {
+            opt.textContent = `미끼 ${idx + 1}번: [ ${b.a}${b.b} ]  ❌ (조건 불일치)`;
+          }
           select.appendChild(opt);
         }
       });
+
+      if (hintMsg) {
+        if (!currentCard) {
+          hintMsg.textContent = '심해어가 출현하면 미끼 조건이 확인됩니다.';
+          hintMsg.className = 'text-[11px] text-slate-400';
+        } else if (availableTotal === 0) {
+          hintMsg.textContent = '남은 완성 미끼가 없습니다.';
+          hintMsg.className = 'text-[11px] text-slate-500';
+        } else if (validCount === 0) {
+          hintMsg.textContent = '⚠️ 이번 심해어 조건을 만족하는 미끼가 없습니다. [포기 (X)]를 선택하세요!';
+          hintMsg.className = 'text-[11px] text-rose-400 font-bold';
+        } else {
+          hintMsg.textContent = `도전 가능한 미끼: ${validCount}개 / 남은 미끼: ${availableTotal}개`;
+          hintMsg.className = 'text-[11px] text-emerald-400 font-semibold';
+        }
+      }
+    }
+
+    function onBaitSelectChange() {
+      const select = document.getElementById('s-bait-select');
+      const hintMsg = document.getElementById('s-bait-hint-msg');
+      const card = FISH_CARDS.find(c => c.id === gameState.currentCardId);
+      if (!select || !hintMsg) return;
+
+      const chosenIdx = select.value;
+      if (chosenIdx === '') {
+        updateBaitDropdown();
+        return;
+      }
+
+      const targetBait = myBaits[chosenIdx];
+      const valid = isBaitValidForCard(targetBait, card);
+      if (valid) {
+        hintMsg.textContent = `미끼 [${targetBait.a}${targetBait.b}] 선택 완료: 조건 부합! [도전하기]를 누르세요.`;
+        hintMsg.className = 'text-[11px] text-emerald-300 font-bold';
+      } else {
+        hintMsg.textContent = `미끼 [${targetBait.a}${targetBait.b}]은(는) '${card ? card.title : ''}' 조건에 맞지 않아 제출할 수 없습니다.`;
+        hintMsg.className = 'text-[11px] text-rose-400 font-bold';
+      }
     }
 
     function submitStudentAction(isPass) {
       const round = gameState.currentRound;
       if (!round || round === 0) {
-        alert('아직 심해어가 출현하지 않았습니다.');
+        showCustomAlert('출현 대기', '아직 심해어가 출현하지 않았습니다.', '⏳');
         return;
       }
 
@@ -1145,11 +1259,23 @@
       const select = document.getElementById('s-bait-select');
       const chosenIdx = select.value;
       if (chosenIdx === '') {
-        alert('출현한 심해어에 던질 미끼를 선택하세요!');
+        showCustomAlert('미끼 미선택', '출현한 심해어에 던질 미끼를 먼저 선택하세요!', '🪱');
         return;
       }
 
+      const card = FISH_CARDS.find(c => c.id === gameState.currentCardId);
       const targetBait = myBaits[chosenIdx];
+
+      // 엄격한 조건 검증: 불일치 시 제출 거부 및 알림
+      if (!isBaitValidForCard(targetBait, card)) {
+        showCustomAlert(
+          '조건 불일치',
+          `선택한 미끼 [${targetBait.a}${targetBait.b}]은(는) 이번 심해어의 조건인 [${card.title} : ${card.desc}]을 만족하지 않습니다!\n\n조건에 맞는 다른 미끼를 고르거나 [포기 (X)]를 선택하세요.`,
+          '🚫'
+        );
+        return;
+      }
+
       targetBait.used = true;
 
       db.ref(`underwater/submissions/${myStudentName}`).set({
