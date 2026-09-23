@@ -146,10 +146,13 @@
       </div>
 
       <div class="flex flex-col sm:flex-row gap-4 items-center bg-slate-950/70 p-3.5 rounded-lg border border-slate-800">
-        <!-- 카드 이미지 (모바일 비율 최적화) -->
+        <!-- 카드 이미지 (모바일 비율 최적화 및 외부 링크 방지 정책 우회) -->
         <div class="w-36 h-48 sm:w-40 sm:h-56 bg-slate-900 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center relative shrink-0">
-          <img id="t-card-img" src="" class="w-full h-full object-cover hidden" alt="심해어 카드" />
-          <div id="t-card-empty" class="text-xs text-slate-500 text-center p-2">심해어 대기 중</div>
+          <img id="t-card-img" src="" referrerpolicy="no-referrer" crossorigin="anonymous" class="w-full h-full object-cover hidden" alt="심해어 카드" />
+          <div id="t-card-empty" class="w-full h-full flex flex-col items-center justify-center text-center p-3 bg-gradient-to-b from-slate-900 to-cyan-950/60">
+            <span class="text-3xl mb-1">🌊</span>
+            <span class="text-xs font-bold text-cyan-300">심해어 대기 중</span>
+          </div>
         </div>
 
         <div class="flex-1 flex flex-col gap-3 w-full">
@@ -250,9 +253,12 @@
     <section class="bg-slate-900/95 p-3.5 rounded-xl border border-cyan-600/60 shadow-lg flex flex-col gap-3">
       <div class="flex gap-3 items-center">
         <!-- 작은 썸네일 카드 -->
-        <div class="w-24 h-32 bg-slate-950 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center shrink-0">
-          <img id="s-card-img" src="" class="w-full h-full object-cover hidden" alt="심해어 카드" />
-          <div id="s-card-placeholder" class="text-[10px] text-slate-500 text-center p-1">심해어<br>대기 중</div>
+        <div class="w-24 h-32 bg-slate-950 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center shrink-0 relative">
+          <img id="s-card-img" src="" referrerpolicy="no-referrer" crossorigin="anonymous" class="w-full h-full object-cover hidden" alt="심해어 카드" />
+          <div id="s-card-placeholder" class="w-full h-full flex flex-col items-center justify-center text-[10px] text-cyan-400 text-center p-1 bg-gradient-to-b from-slate-900 to-cyan-950/60 font-bold">
+            <span class="text-xl mb-1">🐟</span>
+            <span>심해어<br>대기 중</span>
+          </div>
         </div>
 
         <div class="flex-1 min-w-0">
@@ -326,8 +332,53 @@
       { id: 16, title: 'ab가 최소', desc: '가장 작은 두 자리 수 [3점]', score: 3, driveId: '17BJq0xWxQJsy2NGEwXMWIlryyUFfk4hL', type: 'minNum' }
     ];
 
-    function getDriveUrl(id) {
-      return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+    // 구글 드라이브 고속 CDN 및 다중 폴백 URL 생성 (GitHub Pages의 Referer 차단 방지)
+    function getDriveUrls(id) {
+      if (!id) return [];
+      return [
+        `https://lh3.googleusercontent.com/d/${id}`,
+        `https://drive.google.com/thumbnail?id=${id}&sz=w1000`,
+        `https://drive.google.com/uc?export=view&id=${id}`
+      ];
+    }
+
+    // 카드 이미지 로드 및 실패 시 다음 후보 URL로 자동 전환하는 헬퍼 함수
+    function loadFishCardImage(imgEl, placeholderEl, card) {
+      if (!card || !card.driveId) {
+        imgEl.classList.add('hidden');
+        placeholderEl.classList.remove('hidden');
+        placeholderEl.innerHTML = `<span class="text-2xl">🌊</span><span class="text-xs font-bold text-slate-400 mt-1">심해어 대기</span>`;
+        return;
+      }
+
+      const urls = getDriveUrls(card.driveId);
+      let urlIndex = 0;
+
+      imgEl.onerror = () => {
+        urlIndex++;
+        if (urlIndex < urls.length) {
+          imgEl.src = urls[urlIndex];
+        } else {
+          // 구글 드라이브 모든 URL 차단 시 세련된 인앱 그래픽 카드로 자동 폴백
+          imgEl.classList.add('hidden');
+          placeholderEl.classList.remove('hidden');
+          placeholderEl.innerHTML = `
+            <div class="flex flex-col items-center justify-center p-2 text-center h-full">
+              <span class="text-2xl sm:text-3xl mb-1">🐙</span>
+              <span class="text-xs font-black text-amber-300 tracking-tight leading-tight">${card.title}</span>
+              <span class="text-[10px] text-cyan-300 font-mono mt-1 font-bold">[${card.score === 'X' ? 'X점' : card.score + '점'}]</span>
+            </div>
+          `;
+        }
+      };
+
+      imgEl.onload = () => {
+        imgEl.classList.remove('hidden');
+        placeholderEl.classList.add('hidden');
+      };
+
+      // 1차 CDN 주소로 로드 시작
+      imgEl.src = urls[0];
     }
 
     // --- 3. 로컬 상태 관리 ---
@@ -440,15 +491,12 @@
 
         const imgEl = document.getElementById('t-card-img');
         const emptyEl = document.getElementById('t-card-empty');
+        loadFishCardImage(imgEl, emptyEl, card);
+
         if (card) {
-          imgEl.src = getDriveUrl(card.driveId);
-          imgEl.classList.remove('hidden');
-          emptyEl.classList.add('hidden');
           document.getElementById('t-card-title').textContent = card.title;
           document.getElementById('t-card-desc').textContent = card.desc;
         } else {
-          imgEl.classList.add('hidden');
-          emptyEl.classList.remove('hidden');
           document.getElementById('t-card-title').textContent = '출현 심해어 없음';
           document.getElementById('t-card-desc').textContent = '심해어 등장 버튼을 눌러 라운드를 시작하세요.';
         }
@@ -466,15 +514,12 @@
 
         const sImg = document.getElementById('s-card-img');
         const sPh = document.getElementById('s-card-placeholder');
+        loadFishCardImage(sImg, sPh, card);
+
         if (card) {
-          sImg.src = getDriveUrl(card.driveId);
-          sImg.classList.remove('hidden');
-          sPh.classList.add('hidden');
           document.getElementById('s-card-title').textContent = card.title;
           document.getElementById('s-card-desc').textContent = card.desc;
         } else {
-          sImg.classList.add('hidden');
-          sPh.classList.remove('hidden');
           document.getElementById('s-card-title').textContent = '심해어가 곧 나타납니다';
           document.getElementById('s-card-desc').textContent = '선생님의 심해어 출현을 기다리세요.';
         }
