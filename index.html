@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>언더워터 항해기</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDK (v8) -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <style>
+    body {
+      background-color: #08121e;
+      color: #e2e8f0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .slot-used {
+      opacity: 0.35;
+      text-decoration: line-through;
+      pointer-events: none;
+      filter: grayscale(80%);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start p-3 sm:p-6">
+
+  <!-- ================= 1. 로그인 / 입장 화면 ================= -->
+  <div id="view-login" class="w-full max-w-md bg-slate-900 border border-cyan-800/80 rounded-2xl p-6 shadow-2xl mt-12 text-center">
+    <h1 class="text-3xl font-black text-cyan-400 mb-2">언더워터 항해기</h1>
+    <p class="text-xs text-slate-400 mb-6">바닷속 숫자 낚시 교실 웹앱</p>
+
+    <!-- 학생 입장 -->
+    <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 mb-4 text-left">
+      <label class="block text-xs font-bold text-cyan-300 mb-1">학생 참가자</label>
+      <div class="flex gap-2">
+        <input id="student-name-input" type="text" placeholder="이름을 입력하세요" class="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400" />
+        <button onclick="loginAsStudent()" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold px-4 py-2 rounded text-sm transition">
+          입장
+        </button>
+      </div>
+    </div>
+
+    <!-- 교사 입장 -->
+    <div class="bg-slate-800/80 p-4 rounded-xl border border-slate-700 text-left">
+      <label class="block text-xs font-bold text-amber-300 mb-1">선생님 모드 (관리자)</label>
+      <div class="flex gap-2">
+        <input id="teacher-pw-input" type="password" placeholder="비밀번호 1234" class="flex-1 bg-slate-900 border border-slate-600 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" />
+        <button onclick="loginAsTeacher()" class="bg-amber-600 hover:bg-amber-500 text-white font-bold px-4 py-2 rounded text-sm transition">
+          교사 입장
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 2. 교사 화면 ================= -->
+  <div id="view-teacher" class="w-full max-w-5xl hidden flex-col gap-5">
+    <header class="flex justify-between items-center bg-slate-900 p-4 rounded-xl border border-amber-500/50">
+      <div>
+        <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">Teacher Console</span>
+        <h2 class="text-xl font-black text-white">언더워터 항해기 진행 제어기</h2>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="resetGame()" class="bg-rose-700 hover:bg-rose-600 text-white text-xs font-bold px-3 py-2 rounded transition">
+          전체 초기화 (새 게임)
+        </button>
+        <button onclick="logout()" class="bg-slate-700 hover:bg-slate-600 text-white text-xs px-3 py-2 rounded">
+          로그아웃
+        </button>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <!-- 좌측 2열: 제어판 -->
+      <div class="md:col-span-2 flex flex-col gap-4">
+        <!-- 단계 1: 주사위 추첨 -->
+        <div class="bg-slate-800/90 p-4 rounded-xl border border-slate-700">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-sm text-cyan-300">1단계: 10면체 주사위 추첨 (총 16회)</h3>
+            <span class="text-xs text-slate-300 font-mono">추첨 진행: <strong id="t-dice-count" class="text-amber-400">0</strong> / 16</span>
+          </div>
+          <div class="flex items-center gap-4 bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+            <div class="text-center">
+              <span class="text-[11px] text-slate-400 block mb-1">최근 나온 숫자</span>
+              <div id="t-last-dice" class="w-16 h-16 rounded-xl bg-cyan-950 border-2 border-cyan-400 flex items-center justify-center text-4xl font-black text-cyan-300">
+                -
+              </div>
+            </div>
+            <div class="flex-1">
+              <button id="btn-roll-dice" onclick="rollTeacherDice()" class="w-full bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-3 rounded-lg text-sm transition">
+                주사위 굴리기 (0 ~ 9)
+              </button>
+              <p class="text-[11px] text-slate-400 mt-2">학생들이 이 숫자를 보고 자신의 8개 미끼 칸 중 한 곳에 적습니다.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 단계 2: 심해어 낚시 진행 -->
+        <div class="bg-slate-800/90 p-4 rounded-xl border border-slate-700">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-sm text-emerald-300">2단계: 심해어 출현 및 판정 (총 16판)</h3>
+            <span class="text-xs text-slate-300 font-mono">현재: <strong id="t-round-display" class="text-emerald-400">0</strong> / 16판</span>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-4 items-center bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+            <div class="w-40 h-56 bg-slate-950 border border-slate-600 rounded-lg overflow-hidden flex items-center justify-center relative">
+              <img id="t-card-img" src="" class="w-full h-full object-cover hidden" alt="심해어 카드" />
+              <div id="t-card-empty" class="text-xs text-slate-500 text-center p-2">심해어 대기 중</div>
+            </div>
+            <div class="flex-1 flex flex-col gap-3 w-full">
+              <div>
+                <h4 id="t-card-title" class="text-lg font-black text-amber-300">출현 심해어 없음</h4>
+                <p id="t-card-desc" class="text-xs text-slate-300 mt-1">심해어 등장 버튼을 눌러 라운드를 시작하세요.</p>
+              </div>
+              <div class="flex gap-2">
+                <button id="btn-spawn-fish" onclick="spawnFishCard()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded text-sm transition">
+                  심해어 등장!
+                </button>
+                <button id="btn-judge-round" onclick="judgeRound()" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded text-sm transition">
+                  제출 마감 및 자동 채점
+                </button>
+              </div>
+              <div id="t-submit-status" class="text-xs text-cyan-300 font-medium">제출 완료 인원: 0명</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 우측 1열: 실시간 학생 현황판 -->
+      <div class="bg-slate-900 p-4 rounded-xl border border-slate-700 flex flex-col h-[520px]">
+        <h3 class="font-bold text-sm text-amber-300 border-b border-slate-700 pb-2 mb-3">학생 참가 및 점수 현황</h3>
+        <div id="teacher-student-list" class="flex-1 overflow-y-auto space-y-2 pr-1">
+          <!-- 학생 리스트 렌더링 -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= 3. 학생 화면 ================= -->
+  <div id="view-student" class="w-full max-w-2xl hidden flex-col gap-5">
+    <header class="flex justify-between items-center bg-slate-900 p-3 rounded-xl border border-cyan-800">
+      <div>
+        <span class="text-[11px] text-cyan-400 font-semibold block">플레이어</span>
+        <h2 id="s-display-name" class="text-lg font-black text-white">-</h2>
+      </div>
+      <div class="text-right">
+        <span class="text-[11px] text-amber-400 block">내 총 획득 점수</span>
+        <span class="text-xl font-black text-amber-300"><strong id="s-total-score">0</strong>점</span>
+      </div>
+    </header>
+
+    <!-- 교사가 굴린 주사위 안내 배너 -->
+    <div class="bg-cyan-950/80 border border-cyan-500/60 p-3 rounded-xl flex items-center justify-between">
+      <div>
+        <span class="text-xs text-cyan-300 block">선생님이 뽑은 주사위 번호</span>
+        <span class="text-[11px] text-slate-400">아래 8개 미끼 칸 중 비어있는 칸을 눌러 배치하세요.</span>
+      </div>
+      <div id="s-incoming-dice" class="w-12 h-12 rounded-lg bg-cyan-900 border-2 border-cyan-400 text-cyan-200 font-black text-2xl flex items-center justify-center">
+        -
+      </div>
+    </div>
+
+    <!-- 미끼 제작 슬롯 8개 (각각 a, b 2칸) -->
+    <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="text-xs font-bold text-cyan-300">내 8개 미끼함</h3>
+        <span id="s-bait-lock-badge" class="text-[11px] text-slate-400 font-bold">미끼 제작 중 (0/16)</span>
+      </div>
+      <div id="bait-slots-container" class="grid grid-cols-4 gap-2">
+        <!-- 8개 슬롯 생성 -->
+      </div>
+    </div>
+
+    <!-- 현재 출현한 심해어 카드 확인 및 도전 -->
+    <div class="bg-slate-900/90 p-4 rounded-xl border border-cyan-600/60 flex flex-col sm:flex-row gap-4 items-center shadow-lg">
+      <div class="w-36 h-52 bg-slate-950 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center">
+        <img id="s-card-img" src="" class="w-full h-full object-cover hidden" alt="심해어 카드" />
+        <div id="s-card-placeholder" class="text-xs text-slate-500 text-center p-2">심해어 대기 중</div>
+      </div>
+      <div class="flex-1 w-full flex flex-col gap-3">
+        <div>
+          <span class="text-[11px] font-mono text-cyan-400" id="s-round-text">ROUND 0 / 16</span>
+          <h4 id="s-card-title" class="text-base font-black text-amber-300">심해어가 곧 나타납니다</h4>
+          <p id="s-card-desc" class="text-xs text-slate-300">-</p>
+        </div>
+
+        <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800">
+          <span class="text-[11px] text-slate-400 block mb-1">사용할 미끼 선택:</span>
+          <select id="s-bait-select" class="w-full bg-slate-800 text-white rounded p-2 text-xs border border-slate-700 focus:outline-none focus:border-cyan-400">
+            <option value="">-- 미끼를 고르세요 --</option>
+          </select>
+        </div>
+
+        <div class="flex gap-2">
+          <button id="btn-student-submit" onclick="submitStudentAction(false)" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded text-xs transition">
+            도전하기 (미끼 투척)
+          </button>
+          <button id="btn-student-pass" onclick="submitStudentAction(true)" class="bg-rose-800 hover:bg-rose-700 text-white font-bold px-4 py-2 rounded text-xs transition">
+            포기 (X)
+          </button>
+        </div>
+        <div id="s-my-submission-msg" class="text-xs font-semibold text-center text-cyan-300"></div>
+      </div>
+    </div>
+
+    <!-- 16판 항해 기록표 -->
+    <div class="bg-slate-900/90 p-4 rounded-xl border border-slate-700">
+      <h3 class="text-xs font-bold text-cyan-300 mb-2">내 항해 기록표 (16판)</h3>
+      <div id="s-worksheet-table" class="grid grid-cols-4 sm:grid-cols-8 gap-1.5 text-center text-xs">
+        <!-- 1~16판 기록 셀 -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. 파이어베이스 초기화 ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyChxrOzoTxFMy_BvkvNZLXAp1oRvN7Fb1g",
+      authDomain: "focus-tower-defense.firebaseapp.com",
+      databaseURL: "https://focus-tower-defense-default-rtdb.firebaseio.com",
+      projectId: "focus-tower-defense",
+      storageBucket: "focus-tower-defense.firebasestorage.app",
+      messagingSenderId: "519329169002",
+      appId: "1:519329169002:web:401534fe04b6ad39131413",
+      measurementId: "G-G2JRKQ2KXY"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // --- 2. 16종 심해어 카드 정의 (PDF 구글 드라이브 Direct 링크 연결) ---
+    const FISH_CARDS = [
+      { id: 1, title: '0 포함', desc: '0을 포함한 수 [3점]', score: 3, driveId: '1XYDaj_bvTn7kYj0JKeMidq9zQjneLGP6', type: 'has0' },
+      { id: 2, title: '1 포함', desc: '1을 포함한 수 [2점]', score: 2, driveId: '1CMtZZHehekPpEaWiCjkITSWQ00BFM-ye', type: 'has1' },
+      { id: 3, title: '5 포함 (함정)', desc: '5 포함 [X점: 도전 인원수만큼 감점/위험]', score: 'X', driveId: '1i5D1jEXH_X7mlR3ypPRuullH_tGTIDCW', type: 'trap5' },
+      { id: 4, title: '9 포함', desc: '9를 포함한 수 [2점]', score: 2, driveId: '1KWj_ywi2EZUiZ3b2uKx0mgNqFgE5PtkQ', type: 'has9' },
+      { id: 5, title: '50에 가장 근접', desc: '50에 가장 가까운 수 [2점]', score: 2, driveId: '11WfHY8NtDImWAIM8xwamsQJ-8uYJRr9c', type: 'near50' },
+      { id: 6, title: '같은 숫자 2개', desc: 'a=b 인 수 [4점]', score: 4, driveId: '1CDN5zKZ6TG2_m0B_EmC0pWuNjMv-KlnY', type: 'same' },
+      { id: 7, title: 'a-b가 최대', desc: '두 자리 수 차(a-b)가 가장 큰 수 [3점]', score: 3, driveId: '11AFCTQA8Lw6ZlhtsX111JB7pCCOxpypy', type: 'maxDiff' },
+      { id: 8, title: 'a-b가 최소', desc: '두 자리 수 차(a-b)가 가장 작은 수 [3점]', score: 3, driveId: '1nZZ0W4ujKTB6cJcfSmDly-DuDIXbXTbi', type: 'minDiff' },
+      { id: 9, title: 'a+b=10 (함정)', desc: '합이 10 [X점: 도전 인원수만큼 감점/위험]', score: 'X', driveId: '1_nIQDWOI7jIgBPhewEu0EE3fNRs78vKC', type: 'trap10' },
+      { id: 10, title: 'a+b가 최대', desc: '두 수의 합이 가장 큰 수 [3점]', score: 3, driveId: '1MKQOhVfkFCkfULz2yKCCJcaDKj4G19iD', type: 'maxSum' },
+      { id: 11, title: 'a+b가 최소', desc: '두 수의 합이 가장 작은 수 [3점]', score: 3, driveId: '1HVU0abBL6p8fP-JfD4hKiRLx-vVSwC8J', type: 'minSum' },
+      { id: 12, title: 'a가 b의 배수', desc: '첫 번째 숫자가 두 번째 숫자의 배수 [2점]', score: 2, driveId: '103CXnh7wkt4fuN-LocURSbb8J_MhjV6B', type: 'div' },
+      { id: 13, title: 'ab가 5의 배수', desc: '두 자리 수가 5의 배수 [2점]', score: 2, driveId: '10MgGeccw96AHr8F_fCANrZ_zqSE-nEJo', type: 'mul5' },
+      { id: 14, title: 'ab가 10의 배수', desc: '두 자리 수가 10의 배수 [3점]', score: 3, driveId: '1SFD5OO92nCDuXTL3C28iPtz6lSvYL00h', type: 'mul10' },
+      { id: 15, title: 'ab가 최대', desc: '가장 큰 두 자리 수 [3점]', score: 3, driveId: '1f09b-cfsNhLsbGISE_0OSqL4uAzFwcqi', type: 'maxNum' },
+      { id: 16, title: 'ab가 최소', desc: '가장 작은 두 자리 수 [3점]', score: 3, driveId: '17BJq0xWxQJsy2NGEwXMWIlryyUFfk4hL', type: 'minNum' }
+    ];
+
+    function getDriveUrl(id) {
+      return `https://drive.google.com/thumbnail?id=${id}&sz=w800`;
+    }
+
+    // --- 3. 로컬 상태 관리 ---
+    let myRole = null; // 'teacher' | 'student'
+    let myStudentName = '';
+    let myBaits = Array(8).fill(null).map(() => ({ a: null, b: null, used: false }));
+    let myWorksheet = Array(16).fill(null);
+    let gameState = {};
+
+    // --- 4. 로그인 / 모드 진입 ---
+    function loginAsTeacher() {
+      const pw = document.getElementById('teacher-pw-input').value;
+      if (pw === '1234') {
+        myRole = 'teacher';
+        document.getElementById('view-login').classList.add('hidden');
+        document.getElementById('view-teacher').classList.remove('hidden');
+        initFirebaseSync();
+      } else {
+        alert('선생님 비밀번호가 일치하지 않습니다.');
+      }
+    }
+
+    function loginAsStudent() {
+      const name = document.getElementById('student-name-input').value.trim();
+      if (!name) {
+        alert('이름을 입력해 주세요.');
+        return;
+      }
+      myRole = 'student';
+      myStudentName = name;
+      document.getElementById('s-display-name').textContent = name;
+      document.getElementById('view-login').classList.add('hidden');
+      document.getElementById('view-student').classList.remove('hidden');
+
+      // Firebase 학생 목록에 등록
+      db.ref(`underwater/students/${myStudentName}`).update({
+        name: myStudentName,
+        score: 0,
+        baitsLeft: 8
+      });
+
+      renderBaitSlots();
+      renderWorksheet();
+      initFirebaseSync();
+    }
+
+    function logout() {
+      location.reload();
+    }
+
+    // --- 5. Firebase 실시간 동기화 ---
+    function initFirebaseSync() {
+      // 1) 게임 글로벌 상태 동기화
+      db.ref('underwater/game').on('value', snapshot => {
+        gameState = snapshot.val() || {
+          diceRolls: [],
+          currentRound: 0,
+          currentCardId: null,
+          usedCardIds: []
+        };
+        updateViewsByGameState();
+      });
+
+      // 2) 학생 실시간 현황 동기화 (교사용)
+      db.ref('underwater/students').on('value', snapshot => {
+        const data = snapshot.val() || {};
+        renderTeacherStudentList(data);
+        if (myRole === 'student' && data[myStudentName]) {
+          document.getElementById('s-total-score').textContent = data[myStudentName].score || 0;
+        }
+      });
+
+      // 3) 현재 라운드 제출 현황 동기화
+      db.ref('underwater/submissions').on('value', snapshot => {
+        const subs = snapshot.val() || {};
+        const count = Object.keys(subs).length;
+        if (document.getElementById('t-submit-status')) {
+          document.getElementById('t-submit-status').textContent = `제출 완료 인원: ${count}명`;
+        }
+        if (myRole === 'student') {
+          const mySub = subs[myStudentName];
+          const msgEl = document.getElementById('s-my-submission-msg');
+          if (mySub) {
+            msgEl.textContent = mySub.passed ? '현재 라운드: [포기(X)] 제출 완료' : `미끼 [${mySub.val}] 도전 제출 완료! 판정 대기 중`;
+            document.getElementById('btn-student-submit').disabled = true;
+            document.getElementById('btn-student-pass').disabled = true;
+          } else {
+            msgEl.textContent = '';
+            document.getElementById('btn-student-submit').disabled = false;
+            document.getElementById('btn-student-pass').disabled = false;
+          }
+        }
+      });
+    }
+
+    function updateViewsByGameState() {
+      const rolls = gameState.diceRolls || [];
+      const currentRound = gameState.currentRound || 0;
+      const card = FISH_CARDS.find(c => c.id === gameState.currentCardId);
+
+      // 교사 화면 업데이트
+      if (myRole === 'teacher') {
+        document.getElementById('t-dice-count').textContent = rolls.length;
+        document.getElementById('t-last-dice').textContent = rolls.length > 0 ? rolls[rolls.length - 1] : '-';
+        document.getElementById('t-round-display').textContent = currentRound;
+
+        const imgEl = document.getElementById('t-card-img');
+        const emptyEl = document.getElementById('t-card-empty');
+        if (card) {
+          imgEl.src = getDriveUrl(card.driveId);
+          imgEl.classList.remove('hidden');
+          emptyEl.classList.add('hidden');
+          document.getElementById('t-card-title').textContent = card.title;
+          document.getElementById('t-card-desc').textContent = card.desc;
+        } else {
+          imgEl.classList.add('hidden');
+          emptyEl.classList.remove('hidden');
+          document.getElementById('t-card-title').textContent = '출현 심해어 없음';
+          document.getElementById('t-card-desc').textContent = '심해어 등장 버튼을 눌러 라운드를 시작하세요.';
+        }
+      }
+
+      // 학생 화면 업데이트
+      if (myRole === 'student') {
+        document.getElementById('s-incoming-dice').textContent = rolls.length > 0 ? rolls[rolls.length - 1] : '-';
+        document.getElementById('s-round-text').textContent = `ROUND ${currentRound} / 16`;
+
+        const sImg = document.getElementById('s-card-img');
+        const sPh = document.getElementById('s-card-placeholder');
+        if (card) {
+          sImg.src = getDriveUrl(card.driveId);
+          sImg.classList.remove('hidden');
+          sPh.classList.add('hidden');
+          document.getElementById('s-card-title').textContent = card.title;
+          document.getElementById('s-card-desc').textContent = card.desc;
+        } else {
+          sImg.classList.add('hidden');
+          sPh.classList.remove('hidden');
+          document.getElementById('s-card-title').textContent = '심해어가 곧 나타납니다';
+          document.getElementById('s-card-desc').textContent = '선생님의 심해어 출현을 기다리세요.';
+        }
+      }
+    }
+
+    // --- 6. 교사 기능 로직 ---
+    function rollTeacherDice() {
+      const rolls = gameState.diceRolls || [];
+      if (rolls.length >= 16) {
+        alert('이미 주사위 16회를 모두 뽑았습니다!');
+        return;
+      }
+      const newNum = Math.floor(Math.random() * 10);
+      rolls.push(newNum);
+      db.ref('underwater/game/diceRolls').set(rolls);
+    }
+
+    function spawnFishCard() {
+      const currentRound = (gameState.currentRound || 0) + 1;
+      if (currentRound > 16) {
+        alert('16판의 낚시가 모두 끝났습니다!');
+        return;
+      }
+
+      const usedIds = gameState.usedCardIds || [];
+      const remainingCards = FISH_CARDS.filter(c => !usedIds.includes(c.id));
+      if (remainingCards.length === 0) {
+        alert('남은 심해어 카드가 없습니다.');
+        return;
+      }
+
+      const nextCard = remainingCards[Math.floor(Math.random() * remainingCards.length)];
+      usedIds.push(nextCard.id);
+
+      // 이전 라운드 제출함 초기화 및 새 라운드 시작
+      db.ref('underwater/submissions').remove();
+      db.ref('underwater/game').update({
+        currentRound: currentRound,
+        currentCardId: nextCard.id,
+        usedCardIds: usedIds
+      });
+    }
+
+    // 3인 이상 중복 탈락 및 최적 조건 점수 부여 판정
+    function judgeRound() {
+      const card = FISH_CARDS.find(c => c.id === gameState.currentCardId);
+      if (!card) {
+        alert('진행 중인 심해어 카드가 없습니다.');
+        return;
+      }
+
+      db.ref('underwater/submissions').once('value', snapshot => {
+        const subs = snapshot.val() || {};
+        const entries = Object.values(subs);
+
+        // 1. 도전한 사람과 포기한 사람 분리
+        const challengers = entries.filter(e => !e.passed);
+        
+        // 2. 번호별 빈도수 계산
+        const freq = {};
+        challengers.forEach(c => { freq[c.val] = (freq[c.val] || 0) + 1; });
+
+        // 3. 3인 이상 중복 탈락 처리
+        let validList = challengers.filter(c => freq[c.val] < 3);
+
+        // 4. 카드 조건에 맞게 정렬
+        validList = sortChallengersByRule(validList, card);
+
+        // 5. 우승자 1~2명 선정
+        const winners = validList.slice(0, 2);
+        const winnerNames = winners.map(w => w.studentName);
+
+        // Firebase 각 학생 점수 및 결과 업데이트
+        db.ref('underwater/students').once('value', sSnap => {
+          const students = sSnap.val() || {};
+          Object.keys(students).forEach(name => {
+            const sub = subs[name];
+            let gained = 0;
+            let mark = '탈락';
+
+            if (!sub || sub.passed) {
+              mark = 'X';
+            } else if (freq[sub.val] >= 3) {
+              mark = '중복';
+            } else if (winnerNames.includes(name)) {
+              if (card.score === 'X') {
+                gained = challengers.length; // 함정 카드 점수: 도전 인원수만큼 획득
+              } else {
+                gained = card.score;
+              }
+              mark = `+${gained}`;
+            }
+
+            const newScore = (students[name].score || 0) + gained;
+            db.ref(`underwater/students/${name}`).update({ score: newScore });
+
+            // 학생 개인 시트에 라운드 결과 기록 발송
+            db.ref(`underwater/history/${name}/${gameState.currentRound}`).set({
+              val: sub ? sub.val : 'X',
+              result: mark
+            });
+          });
+          alert(`라운드 채점 완료!\n성공자: ${winnerNames.length > 0 ? winnerNames.join(', ') : '없음'}`);
+        });
+      });
+    }
+
+    function sortChallengersByRule(list, card) {
+      return list.filter(item => {
+        const d1 = parseInt(item.a, 10);
+        const d2 = parseInt(item.b, 10);
+        const num = parseInt(item.val, 10);
+
+        switch (card.type) {
+          case 'has0': return d1 === 0 || d2 === 0;
+          case 'has1': return d1 === 1 || d2 === 1;
+          case 'trap5': return d1 === 5 || d2 === 5;
+          case 'has9': return d1 === 9 || d2 === 9;
+          case 'same': return d1 === d2;
+          case 'trap10': return (d1 + d2) === 10;
+          case 'div': return d2 !== 0 && (d1 % d2 === 0);
+          case 'mul5': return num % 5 === 0;
+          case 'mul10': return num % 10 === 0;
+          default: return true;
+        }
+      }).sort((x, y) => {
+        const x1 = parseInt(x.a, 10), x2 = parseInt(x.b, 10), xVal = parseInt(x.val, 10);
+        const y1 = parseInt(y.a, 10), y2 = parseInt(y.b, 10), yVal = parseInt(y.val, 10);
+
+        switch (card.type) {
+          case 'near50': return Math.abs(50 - xVal) - Math.abs(50 - yVal);
+          case 'maxDiff': return (Math.abs(y1 - y2)) - (Math.abs(x1 - x2));
+          case 'minDiff': return (Math.abs(x1 - x2)) - (Math.abs(y1 - y2));
+          case 'maxSum': return (y1 + y2) - (x1 + x2);
+          case 'minSum': return (x1 + x2) - (y1 + y2);
+          case 'maxNum': return yVal - xVal;
+          case 'minNum': return xVal - yVal;
+          default: return 0;
+        }
+      });
+    }
+
+    function resetGame() {
+      if (confirm('모든 게임 진행 상황과 학생 점수를 리셋하시겠습니까?')) {
+        db.ref('underwater').set({
+          game: {
+            diceRolls: [],
+            currentRound: 0,
+            currentCardId: null,
+            usedCardIds: []
+          }
+        });
+        location.reload();
+      }
+    }
+
+    function renderTeacherStudentList(students) {
+      const container = document.getElementById('teacher-student-list');
+      if (!container) return;
+      container.innerHTML = '';
+      const arr = Object.values(students);
+      arr.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+      arr.forEach((st, idx) => {
+        const div = document.createElement('div');
+        div.className = 'flex justify-between items-center p-2 rounded bg-slate-800 border border-slate-700 text-xs';
+        div.innerHTML = `
+          <div>
+            <span class="font-bold text-amber-400 mr-2">${idx + 1}위</span>
+            <span class="font-medium text-white">${st.name}</span>
+          </div>
+          <span class="font-bold text-cyan-300">${st.score || 0}점</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // --- 7. 학생 기능 로직 ---
+    function renderBaitSlots() {
+      const container = document.getElementById('bait-slots-container');
+      container.innerHTML = '';
+      let filledCount = 0;
+
+      myBaits.forEach((bait, idx) => {
+        if (bait.a !== null) filledCount++;
+        if (bait.b !== null) filledCount++;
+
+        const div = document.createElement('div');
+        div.className = `p-2 rounded border bg-slate-800 flex flex-col items-center gap-1 ${bait.used ? 'slot-used' : 'border-slate-600'}`;
+        div.innerHTML = `
+          <span class="text-[10px] text-cyan-400 font-bold">미끼 ${idx + 1}</span>
+          <div class="flex gap-1">
+            <button onclick="fillBaitNumber(${idx}, 'a')" class="w-6 h-7 rounded bg-slate-900 border border-cyan-700 font-black text-sm text-cyan-200">
+              ${bait.a !== null ? bait.a : ''}
+            </button>
+            <button onclick="fillBaitNumber(${idx}, 'b')" class="w-6 h-7 rounded bg-slate-900 border border-cyan-700 font-black text-sm text-cyan-200">
+              ${bait.b !== null ? bait.b : ''}
+            </button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+
+      const badge = document.getElementById('s-bait-lock-badge');
+      badge.textContent = `미끼 제작 (${filledCount}/16)`;
+      if (filledCount === 16) {
+        badge.textContent = '제작 완료 (잠김)';
+        badge.className = 'text-[11px] text-emerald-400 font-bold';
+      }
+      updateBaitDropdown();
+    }
+
+    function fillBaitNumber(slotIdx, position) {
+      const rolls = gameState.diceRolls || [];
+      if (rolls.length === 0) {
+        alert('아직 선생님이 뽑은 주사위 숫자가 없습니다.');
+        return;
+      }
+      const currentNumber = rolls[rolls.length - 1];
+
+      // 이미 채워진 칸은 수정 불가
+      if (myBaits[slotIdx][position] !== null) {
+        alert('이미 적은 칸은 수정할 수 없습니다!');
+        return;
+      }
+
+      myBaits[slotIdx][position] = currentNumber;
+      renderBaitSlots();
+    }
+
+    function updateBaitDropdown() {
+      const select = document.getElementById('s-bait-select');
+      select.innerHTML = '<option value="">-- 미끼를 고르세요 --</option>';
+
+      myBaits.forEach((b, idx) => {
+        if (b.a !== null && b.b !== null && !b.used) {
+          const opt = document.createElement('option');
+          opt.value = idx;
+          opt.textContent = `미끼 ${idx + 1}번: [ ${b.a}${b.b} ]`;
+          select.appendChild(opt);
+        }
+      });
+    }
+
+    function submitStudentAction(isPass) {
+      const round = gameState.currentRound;
+      if (!round || round === 0) {
+        alert('아직 심해어가 출현하지 않았습니다.');
+        return;
+      }
+
+      if (isPass) {
+        db.ref(`underwater/submissions/${myStudentName}`).set({
+          studentName: myStudentName,
+          passed: true,
+          val: 'X'
+        });
+        return;
+      }
+
+      const select = document.getElementById('s-bait-select');
+      const chosenIdx = select.value;
+      if (chosenIdx === '') {
+        alert('출현한 심해어에 던질 미끼를 선택하세요!');
+        return;
+      }
+
+      const targetBait = myBaits[chosenIdx];
+      targetBait.used = true; // 1회 사용 시 소모
+
+      db.ref(`underwater/submissions/${myStudentName}`).set({
+        studentName: myStudentName,
+        passed: false,
+        a: targetBait.a,
+        b: targetBait.b,
+        val: `${targetBait.a}${targetBait.b}`
+      });
+
+      renderBaitSlots();
+    }
+
+    function renderWorksheet() {
+      const container = document.getElementById('s-worksheet-table');
+      container.innerHTML = '';
+      for (let i = 1; i <= 16; i++) {
+        const div = document.createElement('div');
+        div.id = `ws-cell-${i}`;
+        div.className = 'p-1.5 rounded bg-slate-800 border border-slate-700 flex flex-col items-center';
+        div.innerHTML = `
+          <span class="text-[9px] text-slate-400 font-bold">${i}</span>
+          <span class="text-xs font-mono font-bold text-cyan-300 mt-0.5">-</span>
+          <span class="text-[10px] font-bold text-amber-300 mt-0.5">대기</span>
+        `;
+        container.appendChild(div);
+      }
+
+      // 내 개인 결과 기록 감시
+      db.ref(`underwater/history/${myStudentName}`).on('value', snapshot => {
+        const hist = snapshot.val() || {};
+        Object.keys(hist).forEach(roundNum => {
+          const cell = document.getElementById(`ws-cell-${roundNum}`);
+          if (cell) {
+            cell.children[1].textContent = hist[roundNum].val;
+            cell.children[2].textContent = hist[roundNum].result;
+          }
+        });
+      });
+    }
+  </script>
+</body>
+</html>
