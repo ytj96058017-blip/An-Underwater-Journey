@@ -148,7 +148,7 @@
       <div class="flex flex-col sm:flex-row gap-4 items-center bg-slate-950/70 p-3.5 rounded-lg border border-slate-800">
         <!-- 카드 이미지 (모바일 비율 최적화 및 외부 링크 방지 정책 우회) -->
         <div class="w-36 h-48 sm:w-40 sm:h-56 bg-slate-900 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center relative shrink-0">
-          <img id="t-card-img" src="" referrerpolicy="no-referrer" class="w-full h-full object-cover hidden" alt="심해어 카드" />
+          <img id="t-card-img" src="" referrerpolicy="no-referrer" loading="eager" class="w-full h-full object-cover hidden" alt="심해어 카드" />
           <div id="t-card-empty" class="w-full h-full flex flex-col items-center justify-center text-center p-3 bg-gradient-to-b from-slate-900 to-cyan-950/60">
             <span class="text-3xl mb-1">🌊</span>
             <span class="text-xs font-bold text-cyan-300">심해어 대기 중</span>
@@ -254,7 +254,7 @@
       <div class="flex gap-3 items-center">
         <!-- 작은 썸네일 카드 -->
         <div class="w-24 h-32 bg-slate-950 border border-slate-700 rounded-lg overflow-hidden flex items-center justify-center shrink-0 relative">
-          <img id="s-card-img" src="" referrerpolicy="no-referrer" class="w-full h-full object-cover hidden" alt="심해어 카드" />
+          <img id="s-card-img" src="" referrerpolicy="no-referrer" loading="eager" class="w-full h-full object-cover hidden" alt="심해어 카드" />
           <div id="s-card-placeholder" class="w-full h-full flex flex-col items-center justify-center text-[10px] text-cyan-400 text-center p-1 bg-gradient-to-b from-slate-900 to-cyan-950/60 font-bold">
             <span class="text-xl mb-1">🐟</span>
             <span>심해어<br>대기 중</span>
@@ -316,13 +316,13 @@
     const FISH_CARDS = [
       { id: 1, title: '0 포함', desc: '0을 포함한 수 [3점]', score: 3, driveId: '1XYDaj_bvTn7kYj0JKeMidq9zQjneLGP6', type: 'has0' },
       { id: 2, title: '1 포함', desc: '1을 포함한 수 [2점]', score: 2, driveId: '1CMtZZHehekPpEaWiCjkITSWQ00BFM-ye', type: 'has1' },
-      { id: 3, title: '5 포함 (함정)', desc: '5 포함 [X점: 도전 인원수만큼 획득]', score: 'X', driveId: '1i5D1jEXH_X7mlR3ypPRuullH_tGTIDCW', type: 'trap5' },
+      { id: 3, title: '5 포함', desc: '5를 포함한 수 [X점: 미끼 던진 사람 수]', score: 'X', driveId: '1i5D1jEXH_X7mlR3ypPRuullH_tGTIDCW', type: 'has5' },
       { id: 4, title: '9 포함', desc: '9를 포함한 수 [2점]', score: 2, driveId: '1KWj_ywi2EZUiZ3b2uKx0mgNqFgE5PtkQ', type: 'has9' },
       { id: 5, title: '50에 가장 근접', desc: '50에 가장 가까운 수 [2점]', score: 2, driveId: '11WfHY8NtDImWAIM8xwamsQJ-8uYJRr9c', type: 'near50' },
       { id: 6, title: '같은 숫자 2개', desc: 'a=b 인 수 [4점]', score: 4, driveId: '1CDN5zKZ6TG2_m0B_EmC0pWuNjMv-KlnY', type: 'same' },
       { id: 7, title: 'a-b가 최대', desc: '두 자리 수 차(a-b)가 가장 큰 수 [3점]', score: 3, driveId: '11AFCTQA8Lw6ZlhtsX111JB7pCCOxpypy', type: 'maxDiff' },
       { id: 8, title: 'a-b가 최소', desc: '두 자리 수 차(a-b)가 가장 작은 수 [3점]', score: 3, driveId: '1nZZ0W4ujKTB6cJcfSmDly-DuDIXbXTbi', type: 'minDiff' },
-      { id: 9, title: 'a+b=10 (함정)', desc: '합이 10 [X점: 도전 인원수만큼 획득]', score: 'X', driveId: '1_nIQDWOI7jIgBPhewEu0EE3fNRs78vKC', type: 'trap10' },
+      { id: 9, title: 'a+b=10', desc: '두 수의 합이 10 [X점: 미끼 던진 사람 수]', score: 'X', driveId: '1_nIQDWOI7jIgBPhewEu0EE3fNRs78vKC', type: 'sum10' },
       { id: 10, title: 'a+b가 최대', desc: '두 수의 합이 가장 큰 수 [3점]', score: 3, driveId: '1MKQOhVfkFCkfULz2yKCCJcaDKj4G19iD', type: 'maxSum' },
       { id: 11, title: 'a+b가 최소', desc: '두 수의 합이 가장 작은 수 [3점]', score: 3, driveId: '1HVU0abBL6p8fP-JfD4hKiRLx-vVSwC8J', type: 'minSum' },
       { id: 12, title: 'a가 b의 배수', desc: '첫 번째 숫자가 두 번째 숫자의 배수 [2점]', score: 2, driveId: '103CXnh7wkt4fuN-LocURSbb8J_MhjV6B', type: 'div' },
@@ -332,26 +332,38 @@
       { id: 16, title: 'ab가 최소', desc: '가장 작은 두 자리 수 [3점]', score: 3, driveId: '17BJq0xWxQJsy2NGEwXMWIlryyUFfk4hL', type: 'minNum' }
     ];
 
-    // 구글 드라이브 고속 CDN 및 다중 폴백 URL 생성 (GitHub Pages의 Referer 차단 방지)
-    function getDriveUrls(id) {
-      if (!id) return [];
-      return [
-        `https://drive.google.com/thumbnail?id=${id}&sz=w1000`,
-        `https://lh3.googleusercontent.com/d/${id}`,
-        `https://drive.google.com/uc?export=view&id=${id}`
+    // 카드 이미지 다중 후보 URL 생성 (깃허브 로컬 이미지 -> 구글 드라이브 CDN -> 프록시 순차 시도)
+    function getCardCandidateUrls(card) {
+      if (!card) return [];
+      const list = [
+        `images/card_${card.id}.png`,
+        `images/card_${card.id}.jpg`
       ];
+      if (card.driveId) {
+        list.push(`https://lh3.googleusercontent.com/d/${card.driveId}`);
+        list.push(`https://drive.google.com/thumbnail?id=${card.driveId}&sz=w800`);
+        list.push(`https://wsrv.nl/?url=drive.google.com/uc?id=${card.driveId}`);
+      }
+      return list;
     }
 
-    // 카드 이미지 로드 및 실패 시 다음 후보 URL로 자동 전환하는 헬퍼 함수
+    // 카드 이미지 로드 함수 (상태 변경 시 중복 리로드 방지 및 캐싱)
     function loadFishCardImage(imgEl, placeholderEl, card) {
-      if (!card || !card.driveId) {
+      if (!card) {
         imgEl.classList.add('hidden');
         placeholderEl.classList.remove('hidden');
-        placeholderEl.innerHTML = `<span class="text-2xl">🌊</span><span class="text-xs font-bold text-slate-400 mt-1">심해어 대기</span>`;
+        placeholderEl.innerHTML = `<span class="text-2xl">🌊</span><span class="text-xs font-bold text-cyan-300 mt-1">심해어 대기 중</span>`;
+        imgEl.removeAttribute('data-card-id');
         return;
       }
 
-      const urls = getDriveUrls(card.driveId);
+      // 이미 같은 카드가 정상 표시 중이면 불필요한 네트워크 재요청을 생략
+      if (imgEl.getAttribute('data-card-id') === String(card.id) && !imgEl.classList.contains('hidden')) {
+        return;
+      }
+
+      imgEl.setAttribute('data-card-id', String(card.id));
+      const urls = getCardCandidateUrls(card);
       let urlIndex = 0;
 
       imgEl.onerror = () => {
@@ -359,12 +371,12 @@
         if (urlIndex < urls.length) {
           imgEl.src = urls[urlIndex];
         } else {
-          // 구글 드라이브 모든 URL 차단 시 세련된 인앱 그래픽 카드로 자동 폴백
+          // 모든 URL 실패 시 엑박 대신 세련된 인앱 심해 그래픽 카드로 표시
           imgEl.classList.add('hidden');
           placeholderEl.classList.remove('hidden');
           placeholderEl.innerHTML = `
             <div class="flex flex-col items-center justify-center p-2 text-center h-full">
-              <span class="text-2xl sm:text-3xl mb-1">🐙</span>
+              <span class="text-2xl sm:text-3xl mb-1">🦑</span>
               <span class="text-xs font-black text-amber-300 tracking-tight leading-tight">${card.title}</span>
               <span class="text-[10px] text-cyan-300 font-mono mt-1 font-bold">[${card.score === 'X' ? 'X점' : card.score + '점'}]</span>
             </div>
@@ -377,7 +389,6 @@
         placeholderEl.classList.add('hidden');
       };
 
-      // 1차 CDN 주소로 로드 시작
       imgEl.src = urls[0];
     }
 
@@ -758,18 +769,23 @@
         const subs = snapshot.val() || {};
         const entries = Object.values(subs);
 
+        // 이번 라운드에 '도전하기(미끼 투척)'를 누른 학생들
         const challengers = entries.filter(e => !e.passed);
         
-        // 중복 계산
+        // 3명 이상 동일한 숫자를 제출한 경우 탈락 처리하기 위한 빈도수 계산
         const freq = {};
         challengers.forEach(c => { freq[c.val] = (freq[c.val] || 0) + 1; });
 
-        // 3명 이상 중복 탈락
+        // 3명 미만 중복자 중 조건 만족자 선별
         let validList = challengers.filter(c => freq[c.val] < 3);
         validList = sortChallengersByRule(validList, card);
 
+        // 상위 1~2명 성공자 선정
         const winners = validList.slice(0, 2);
         const winnerNames = winners.map(w => w.studentName);
+
+        // X점 카드인 경우: 이번 판에 미끼를 던진 전체 학생 수(challengers.length)만큼 점수 지급
+        const roundPoints = (card.score === 'X') ? challengers.length : Number(card.score);
 
         db.ref('underwater/students').once('value', sSnap => {
           const students = sSnap.val() || {};
@@ -783,11 +799,7 @@
             } else if (freq[sub.val] >= 3) {
               mark = '중복';
             } else if (winnerNames.includes(name)) {
-              if (card.score === 'X') {
-                gained = challengers.length;
-              } else {
-                gained = card.score;
-              }
+              gained = roundPoints;
               mark = `+${gained}`;
             }
 
@@ -799,7 +811,11 @@
               result: mark
             });
           });
-          alert(`채점 완료!\n성공자: ${winnerNames.length > 0 ? winnerNames.join(', ') : '없음'}`);
+
+          const resultMsg = winnerNames.length > 0 
+            ? `채점 완료!\n성공자: ${winnerNames.join(', ')}\n획득 점수: +${roundPoints}점 (${card.score === 'X' ? '미끼 던진 인원 ' + challengers.length + '명 반영' : '카드 기본 점수'})`
+            : '채점 완료!\n조건을 만족한 성공자가 없습니다.';
+          alert(resultMsg);
         });
       });
     }
@@ -813,10 +829,10 @@
         switch (card.type) {
           case 'has0': return d1 === 0 || d2 === 0;
           case 'has1': return d1 === 1 || d2 === 1;
-          case 'trap5': return d1 === 5 || d2 === 5;
+          case 'has5': return d1 === 5 || d2 === 5;
           case 'has9': return d1 === 9 || d2 === 9;
           case 'same': return d1 === d2;
-          case 'trap10': return (d1 + d2) === 10;
+          case 'sum10': return (d1 + d2) === 10;
           case 'div': return d2 !== 0 && (d1 % d2 === 0);
           case 'mul5': return num % 5 === 0;
           case 'mul10': return num % 10 === 0;
@@ -834,7 +850,9 @@
           case 'minSum': return (x1 + x2) - (y1 + y2);
           case 'maxNum': return yVal - xVal;
           case 'minNum': return xVal - yVal;
-          default: return 0;
+          default: 
+            // 조건 카드(0, 1, 5, 9 포함, 합 10, 같은 수 등)의 기본 우선순위는 작은 수 우선(규칙 4번)
+            return xVal - yVal;
         }
       });
     }
